@@ -116,6 +116,20 @@
             </div>
             <form id="form-provider" class="modal-body">
                 <input type="hidden" id="provider-id">
+
+                <!-- Zoek een bestaande praktijk -->
+                <div class="form-group search-place-group">
+                    <label for="search-place">🔍 Zoek praktijk (optioneel)</label>
+                    <div class="search-place-wrapper">
+                        <input type="text" id="search-place" placeholder="Typ naam + plaats, bijv. 'Fysiotherapie Purmerend'">
+                        <button type="button" id="btn-search-place" class="btn btn-small btn-primary">Zoeken</button>
+                    </div>
+                    <div id="search-place-results" class="search-place-results hidden"></div>
+                    <small>Zoek een praktijk om automatisch gegevens in te vullen</small>
+                </div>
+
+                <hr class="form-divider">
+
                 <div class="form-group">
                     <label for="provider-naam">Naam *</label>
                     <input type="text" id="provider-naam" required placeholder="Bijv. Fysiotherapie Purmerend">
