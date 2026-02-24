@@ -536,6 +536,79 @@ body {
     background: var(--color-primary-hover);
 }
 
+/* === Search Place in Form === */
+.search-place-group {
+    background: var(--color-primary-light);
+    margin: -1.5rem -1.5rem 1rem -1.5rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.search-place-wrapper {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.search-place-wrapper input {
+    flex: 1;
+}
+
+.search-place-results {
+    margin-top: 0.5rem;
+    max-height: 200px;
+    overflow-y: auto;
+    background: var(--color-white);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+}
+
+.search-place-item {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--color-border);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.search-place-item:last-child {
+    border-bottom: none;
+}
+
+.search-place-item:hover {
+    background: var(--color-bg);
+}
+
+.search-place-item-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--color-text);
+}
+
+.search-place-item-address {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    margin-top: 0.125rem;
+}
+
+.search-place-loading {
+    padding: 1rem;
+    text-align: center;
+    color: var(--color-text-secondary);
+    font-size: 0.85rem;
+}
+
+.search-place-empty {
+    padding: 1rem;
+    text-align: center;
+    color: var(--color-text-secondary);
+    font-size: 0.85rem;
+}
+
+.form-divider {
+    margin: 1rem 0;
+    border: none;
+    border-top: 1px solid var(--color-border);
+}
+
 /* Leaflet popup styling override */
 .leaflet-popup-content-wrapper {
     border-radius: var(--radius) !important;
