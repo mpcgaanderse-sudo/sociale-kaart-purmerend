@@ -477,6 +477,99 @@
     }
 
     // =========================================================
+    // PLACE SEARCH (Nominatim / OpenStreetMap)
+    // =========================================================
+    async function searchPlaces(query) {
+        const resultsDiv = $('#search-place-results');
+        resultsDiv.classList.remove('hidden');
+        resultsDiv.innerHTML = '<div class="search-place-loading">Zoeken...</div>';
+
+        try {
+            // Zoek in Nederland, focus op Purmerend regio
+            const searchQuery = `${query}, Purmerend, Nederland`;
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&addressdetails=1&limit=5&countrycodes=nl`,
+                { headers: { 'Accept-Language': 'nl' } }
+            );
+            const data = await response.json();
+
+            if (data.length === 0) {
+                // Probeer bredere zoekopdracht zonder Purmerend
+                const broaderResponse = await fetch(
+                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Nederland')}&addressdetails=1&limit=5&countrycodes=nl`,
+                    { headers: { 'Accept-Language': 'nl' } }
+                );
+                const broaderData = await broaderResponse.json();
+                renderPlaceResults(broaderData);
+            } else {
+                renderPlaceResults(data);
+            }
+        } catch (err) {
+            console.error('Place search error:', err);
+            resultsDiv.innerHTML = '<div class="search-place-empty">Fout bij zoeken. Probeer opnieuw.</div>';
+        }
+    }
+
+    function renderPlaceResults(places) {
+        const resultsDiv = $('#search-place-results');
+
+        if (places.length === 0) {
+            resultsDiv.innerHTML = '<div class="search-place-empty">Geen resultaten gevonden. Probeer een andere zoekterm.</div>';
+            return;
+        }
+
+        resultsDiv.innerHTML = '';
+        places.forEach(place => {
+            const item = document.createElement('div');
+            item.className = 'search-place-item';
+
+            const name = place.name || place.display_name.split(',')[0];
+            const address = place.display_name;
+
+            item.innerHTML = `
+                <div class="search-place-item-name">${escapeHtml(name)}</div>
+                <div class="search-place-item-address">${escapeHtml(address)}</div>
+            `;
+
+            item.addEventListener('click', () => {
+                selectPlace(place);
+            });
+
+            resultsDiv.appendChild(item);
+        });
+    }
+
+    function selectPlace(place) {
+        // Vul de formuliervelden in
+        const name = place.name || place.display_name.split(',')[0];
+        $('#provider-naam').value = name;
+
+        // Bouw adres op uit addressdetails
+        const addr = place.address || {};
+        let adresStr = '';
+        if (addr.road) {
+            adresStr = addr.road;
+            if (addr.house_number) adresStr += ' ' + addr.house_number;
+        }
+        if (addr.postcode || addr.city || addr.town || addr.village) {
+            if (adresStr) adresStr += ', ';
+            if (addr.postcode) adresStr += addr.postcode + ' ';
+            adresStr += addr.city || addr.town || addr.village || '';
+        }
+        if (adresStr) {
+            $('#provider-adres').value = adresStr.trim();
+        } else {
+            $('#provider-adres').value = place.display_name;
+        }
+
+        // Verberg resultaten en leeg zoekveld
+        $('#search-place-results').classList.add('hidden');
+        $('#search-place').value = '';
+
+        showToast('Gegevens ingevuld! Controleer en vul aan.');
+    }
+
+    // =========================================================
     // CRUD OPERATIONS
     // =========================================================
     async function saveProvider(data) {
@@ -581,6 +674,26 @@
         // Add button
         $('#btn-add').addEventListener('click', () => {
             openProviderModal();
+        });
+
+        // Place search in form
+        $('#btn-search-place').addEventListener('click', () => {
+            const query = $('#search-place').value.trim();
+            if (query.length >= 3) {
+                searchPlaces(query);
+            } else {
+                showToast('Typ minimaal 3 tekens om te zoeken');
+            }
+        });
+
+        $('#search-place').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const query = $('#search-place').value.trim();
+                if (query.length >= 3) {
+                    searchPlaces(query);
+                }
+            }
         });
 
         // Logout
@@ -698,6 +811,11 @@
     // =========================================================
     function openProviderModal(provider = null) {
         const isEdit = !!provider;
+
+        // Reset place search
+        $('#search-place').value = '';
+        $('#search-place-results').classList.add('hidden');
+        $('#search-place-results').innerHTML = '';
 
         $('#modal-provider-title').textContent = isEdit ? 'Zorgverlener bewerken' : 'Zorgverlener toevoegen';
         $('#provider-id').value = isEdit ? provider.id : '';
