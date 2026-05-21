@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>Data Import - Sociale Kaart</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 900px; margin: 40px auto; padding: 20px; }
+        h1 { color: #2563eb; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #cce5ff; color: #004085; }
+        button { background: #2563eb; color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 10px 5px 10px 0; }
+        button:hover { background: #1d4ed8; }
+        button:disabled { background: #ccc; }
+        #log { background: #f5f5f5; padding: 15px; border-radius: 5px; max-height: 400px; overflow-y: auto; font-family: monospace; font-size: 13px; }
+        .log-item { margin: 5px 0; padding: 5px; border-bottom: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <h1>📥 Data Import - Sociale Kaart Purmerend</h1>
+    <p>Dit script importeert de zorgverleners uit jullie oude sociale kaart naar Firebase.</p>
+
+    <button id="btn-import" onclick="startImport()">🚀 Start Import</button>
+    <button id="btn-clear" onclick="clearDatabase()">🗑️ Database Legen</button>
+
+    <div id="log"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script>
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const item = document.createElement('div');
+            item.className = 'log-item';
+            item.innerHTML = `<span style="color: ${type === 'success' ? 'green' : type === 'error' ? 'red' : 'blue'}">
+                ${type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ'}</span> ${message}`;
+            logDiv.appendChild(item);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        // Alle zorgverleners data
+        const zorgverleners = [
+            // === GGZ VOLWASSENEN ===
+            {
+                naam: "ADHD Centraal",
+                categorie: "GGZ",
+                adres: "Naritaweg 233, 1043 CB Amsterdam",
+                telefoon: "088-3131202",
+                email: "amsterdam@adhdcentraal.nl",
+                labels: ["ADHD", "ADD", "volwassenen", "SGGZ"],
+                opmerkingen: [{ tekst: "Wachttijd ca. 26 weken. Gecontracteerde zorg.", auteur: "Import", datum: "2024-01-01" }]
+            },
+            {
+                naam: "De Autismespecialist",
+                categorie: "GGZ",
+                adres: "Kraanspoor 50, 1033 SE Amsterdam",
+                telefoon: "",
+                email: "",
+                labels: ["autisme", "EMDR", "volwassenen"],
+                opmerkingen: [{ tekst: "Ongecontracteerde zorg. Wachttijd intake 12 weken, daarna 0 weken.", auteur: "Import", datum: "2024-01-01" }]
+            },
+            {
+                naam: "Caredate",
+                categorie: "GGZ",
+                adres: "Waterlandlaan 81, 1441 RS Purmerend",
+                telefoon: "085-065 3165",
+                email: "info@caredate.nl",
+                website: "https://caredate.nl",
+                labels: ["angst", "depressie", "BGGZ", "Purmerend"],
+                opmerkingen: [{ tekst: "Wachttijd ca. 1 week. Zowel gecontracteerde als ongecontracteerde zorg. Contact: drs. Flor Polanco", auteur: "Import", datum: "2024-01-01" }]
+            },
+            {
+                naam: "Dokter Bosman",
+                categorie: "GGZ",
+                adres: "Surinameplein 57, 1058 GN Amsterdam",
+                telefoon: "088-226 76 26",
+                email: "aanmeldingen@dokterbosman.nl",
+                labels: ["ADHD", "autisme", "angst", "burn-out", "depressie", "dwang", "PTSS", "SGGZ"],
+                opmerkingen: [{ tekst: "Wachttijd aanmelding 25 weken, behandeling geen wachttijd. Werkt samen met Autisme Kenniscentrum. Verwijzen via ZorgDomein mogelijk.", auteur: "Import", datum: "2024-01-01" }]
+            },
+            {
+                naam: "FamilySupporters",
+                categorie: "GGZ",
+                adres: "Waterlandlaan 81, 1441 RS Purmerend",
+                telefoon: "020-2338735",
+                email: "jan@familysupporters.nl",
+                labels: ["ADHD", "angst", "ASS", "dementie", "depressie", "paniek", "persoonlijkheidsstoornis", "PTSS", "trauma", "BGGZ", "SGGZ", "Purmerend"],
+                opmerkingen: [{ tekst: "Wachttijd 1-2 weken. Contact: Jan den Boon / drs. Flor Polanco. Let op aanmeldstops.", auteur: "Import", datum: "2024-01-01" }]
+            },
+            {
+                naam: "GGZ Noord-Holland-Noord",
+                categorie: "GGZ",
+                adres: "Maelsonstraat 1, Hoorn",
+                telefoon: "088-65 65 050",
+                email: "",
+                website: "https://www.ggz-nhn.nl/Verwijzers",
+                labels: ["psychiatrie", "jeugd", "volwassenen", "ouderen", "BGGZ", "SGGZ"],
+                opmerkingen: [{ tekst: "Keuzemenu: 1=Jeugd, 2=Volwassenen, 3=Ouderen/Geriant. Ook aanmelden via HIS mogelijk.", auteur: "Import", datum: "2024-01-01" }]
+            },
+            {
+                naam: "Hersencentrum",
+                categorie: "GGZ",
+                adres: "Wilhelminalaan 1, 1441 EK Purmerend",
+                telefoon: "0299-435 414",
+                email: "info@hersencentrum.nl",
+                website: "https://hersencentrum.nl/aanmelden/",
+                labels: ["ADHD", "ADD", "angst", "ASS", "autisme", "persoonlijkheidsproblematiek", "PTSS", "relatietherapie", "gezinstherapie", "Purmerend"],
+                opmerkingen: [{ tekst: "Wachttijd ca. 18 weken. Gecontracteerde zorg.", auteur: "Import", datum: "2024-01-01" }]
+            },
+            {
+                naam: "HSK Zaandam",
+                categorie: "GGZ",
+                adres: "Westzijde 412B, 1506 GM Zaandam",
+                telefoon: "088-11 55 835",
+                email: "info@hsk.nl",
+                website: "https://www.hsk.nl/aanmelden/",
+                labels: ["angst", "depressie", "paniek", "trauma", "PTSS", "dwang", "tics", "functionele stoornis"],
+                opmerkingen: [{ tekst: "Let op: regelmatig aanmeldpauzes. Bereikbaar 08:00-17:30.", auteur: "Import", datum: "2024-01-01" }]
+            },
+            {
+                naam: "Human Concern - Eetstoornissen",
+                categorie: "GGZ",
+                adres: "Baden Powellweg 305M, 1069 LH Amsterdam",
+                telefoon: "020-610 6224",
+                email: "aanmeldingen@humanconcern.nl",
+                labels: ["eetstoornissen", "anorexia", "boulimia", "eetbuistoornis", "OSFED"],
+                opmerkingen: [{ tekst: "Centrum voor eetstoornissen. Wachttijd ca. 10 weken. Telefonisch bereikbaar 09:00-13:00.", auteur: "Import", datum: "2024-01-01" }]
+            },
+            {
+                naam: "Indigo Purmerend",
+                categorie: "GGZ",
+                adres: "Waterlandlaan 81, 1441 RS Purmerend",
+                telefoon: "088-3571100",
+                email: "",
+                website: "https://www.indigo.nl/aanmelden/verwijzer/",
+                labels: ["ADHD", "alzheimer", "angst", "autisme", "dementie", "depressie", "gedragsproblemen", "SOLK", "persoonlijkheidsstoornis", "psychose", "PTSS", "slaapproblemen", "trauma", "verslaving", "Purmerend"],
+                opmerkingen: [{ tekst: "Wachttijd ca. 7 weken. Gecontracteerde zorg. Breed aanbod.", auteur: "Import", datum: "2024-01-01" }]
+            },
+            {
+                naam: "Mental Health Clinic Isabel Henriques",
+                categorie: "GGZ",
+                adres: "Gelderskade 6A, 1012 BH Amsterdam",
+                telefoon: "06-14478140",
+                email: "admin@isabelhenriques.nl",
+                website: "https://www.isabelhenriques.nl/nl",
+                labels: ["Portugees", "intercultureel"],
+                opmerkingen: [{ tekst: "Portugeestalige GGZ.", auteur: "Import", datum: "2024-01-01" }]
+            },
+            {
+                naam: "Odion",
+                categorie: "GGZ",
+                adres: "Postbus 88, 1530 AB Wormer",
+                telefoon: "0299-418 350",
+                email: "clientservice@odion.nl",
+                website: "https://www.odion.nl",
+                labels: ["verstandelijke beperking", "therapie", "wonen", "dagbesteding"],
+                opmerkingen: [{ tekst: "Voor mensen met een beperking. Wachttijd ca. 6 weken. Bereikbaar 9:00-15:00.", auteur: "Import", datum: "2024-01-01" }]
+            },
+            {
+                naam: "Parnassia Purmerend",
+                categorie: "GGZ",
+                adres: "Ilpendamstraat 29, 1441 ZE Purmerend",
+                telefoon: "088-357 3620",
+                email: "verwijzers@parnassiagroep.nl",
+                labels: ["angst", "autisme", "asperger", "dementie", "depressie", "persoonlijkheidsstoornis", "psychose", "verslaving", "SGGZ", "Purmerend"],
+                opmerkingen: [{ tekst: "Acute Dagbehandeling. Wachttijden variëren per stoornis (5-18 weken). Werkdagen 08:30-17:00.", auteur: "Import", datum: "2024-01-01" }]
+            },
+            {
+                naam: "PMC Noord-Holland (PMC-NH)",
+                categorie: "GGZ",
+                adres: "De Werf 11, 1502 GS Zaandam",
+                telefoon: "075-6125865",
+                email: "info@pmcnhbv.nl",
+                website: "http://www.pmcnh.nl/",
+                labels: ["angst", "paniek", "depressie", "verslaving", "persoonlijkheidsproblematiek", "trauma", "BGGZ", "SGGZ"],
+                opmerkingen: [{ tekst: "Wachttijd ca. 1 week. Gecontracteerde zorg.", auteur: "Import", datum: "2024-01-01" }]
+            },
+            {
+                naam: "Psygro",
+                categorie: "GGZ",
+                adres: "Purmerend",
+                telefoon: "0299-607459",
+                email: "info@psygro.nl",
+                labels: ["ADHD", "autisme", "angst", "depressie", "persoonlijkheidsstoornis", "kinderen", "jeugd"],
+                opmerkingen: [{ tekst: "Wachttijd 20-24 weken. Verwijzen via ZorgDomein/Zorgmail.", auteur: "Import", datum: "2024-01-01" }]
+            },
+            {
+                naam: "Psyned Purmerend",
+                categorie: "GGZ",
+                adres: "Waterlandlaan 81, 1441 RS Purmerend",
+                telefoon: "085-4014720",
+                email: "",
+                labels: ["ADHD", "angst", "agorafobie", "autisme", "bindingsangst", "bipolaire stoornis", "burn-out", "kanker begeleiding", "depressie", "slaapproblemen", "faalangst", "paniek", "relatieproblemen", "PTSS", "Purmerend"],
+                opmerkingen: [{ tekst: "Wachttijd ca. 1 week. ONGECONTRACTEERDE ZORG.", auteur: "Import", datum: "2024-01-01" }]
+            },
+            {
+                naam: "PsyQ Purmerend",
+                categorie: "GGZ",
+                adres: "Waterlandplein 1, 1441 RP Purmerend",
+                telefoon: "088-357 36 20",
+                email: "aanmelding@parnassia.nl",
+                website: "https://www.psyq.nl",
+                labels: ["ADHD", "angst", "bipolaire stoornis", "borderline", "BDD", "chronische pijn", "CVS", "conversiestoornis", "depressie", "dwang", "eetstoornis", "paniek", "persoonlijkheidsstoornis", "PTSS", "seksuologie", "transgender", "slaapproblemen", "tics", "trauma", "Purmerend"],
+                opmerkingen: [{ tekst: "Wachttijden variëren per stoornis (5-18 weken). Bereikbaar 08:30-17:00. Aanmelding: 088 357 4400", auteur: "Import", datum: "2024-01-01" }]
+            },
+            {
+                naam: "PsyQ Zaandam",
+                categorie: "GGZ",
+                adres: "Ankersmidplein 2, 1506 CK Zaandam",
+                telefoon: "088-357 3630",
+                email: "aanmelding@parnassia.nl",
+                website: "https://www.psyq.nl",
+                labels: ["ADHD", "angst", "bipolaire stoornis", "borderline", "depressie", "dwang", "eetstoornis", "paniek", "persoonlijkheidsstoornis", "PTSS", "trauma"],
+                opmerkingen: [{ tekst: "Aanmelding: 088 357 4400", auteur: "Import", datum: "2024-01-01" }]
+            },
+            {
+                naam: "Vincent Verslavingszorg",
+                categorie: "Verslavingszorg",
+                adres: "",
+                telefoon: "0478-52 7700",
+                email: "aanmelden@vvgi.nl",
+                website: "https://www.vincentverslavingszorg.nl/",
+                labels: ["alcoholverslaving", "gameverslaving", "koopverslaving", "drugsverslaving", "medicijnverslaving", "seksverslaving", "pornoverslaving", "gokverslaving", "internetverslaving", "socialmediaverslaving"],
+                opmerkingen: [{ tekst: "Geen wachtlijst. Gecontracteerde zorg.", auteur: "Import", datum: "2024-01-01" }]
+            },
+            {
+                naam: "Trubendorffer Verslavingszorg",
+                categorie: "Verslavingszorg",
+                adres: "Geschutswerf 14, 1018 BX Amsterdam",
+                telefoon: "020-763 05 00",
+                email: "intake@trubendorffer.nl",
+                labels: ["alcoholverslaving", "seksverslaving", "eetverslaving", "drugsverslaving", "cocaïneverslaving", "wietverslaving", "gokverslaving", "gameverslaving", "internetverslaving", "medicijnverslaving", "relatieverslaving", "dubbele diagnose"],
+                opmerkingen: [{ tekst: "Open 7 dagen per week 7:00-22:00. Intake 24/7: 085 019 7271 (gratis).", auteur: "Import", datum: "2024-01-01" }]
+            },
+            // === JEUGD GGZ ===
+            {
+                naam: "ARQ Centrum'45 - Jeugd",
+                categorie: "Jeugd GGZ",
+                adres: "",
+                telefoon: "088-3305511",
+                email: "",
+                labels: ["trauma", "kinderen", "jongeren", "gezinnen", "SGGZ"],
+                opmerkingen: [{ tekst: "Gespecialiseerd in trauma bij kinderen, jongeren en gezinnen. Bereikbaar ma-do 9:00-12:00.", auteur: "Import", datum: "2024-01-01" }]
+            },
+            {
+                naam: "Indigo Jeugd",
+                categorie: "Jeugd GGZ",
+                adres: "Heemskerk",
+                telefoon: "088-3571100",
+                email: "",
+                website: "https://www.indigo.nl/aanmelden/verwijzer/",
+                labels: ["ADHD", "agressie", "woede", "angst", "autisme", "depressie", "gedragsproblemen", "ODD", "CD", "slaapproblemen", "kinderen"],
+                opmerkingen: [{ tekst: "Wachttijd ca. 7 weken. Locatie Heemskerk.", auteur: "Import", datum: "2024-01-01" }]
+            },
+            {
+                naam: "Levvel",
+                categorie: "Jeugd GGZ",
+                adres: "",
+                telefoon: "088-054 7001",
+                email: "aanmelden@levvel.nl",
+                labels: ["jeugd", "kinderen"],
+                opmerkingen: []
+            },
+            // === MAATSCHAPPELIJK WERK / WELZIJN ===
+            {
+                naam: "Clup Welzijn - Sociaal Wijkteam",
+                categorie: "Maatschappelijk werk",
+                adres: "Plantsoenstraat 17, 1441 CW Purmerend",
+                telefoon: "0299-480 630",
+                email: "centrumengors@swtpurmerend.nl",
+                website: "https://www.clup.nl/",
+                labels: ["sociaal wijkteam", "welzijn", "koffieochtend", "eenzaamheid", "Purmerend"],
+                opmerkingen: [{ tekst: "Contact: Astrid Krüse (06 558 784 93) of Ellen Oostrom (06 409 710 19).", auteur: "Import", datum: "2024-01-01" }]
+            },
+            {
+                naam: "Loket Wmo Purmerend",
+                categorie: "Maatschappelijk werk",
+                adres: "Purmerend",
+                telefoon: "0299-452 555",
+                email: "loketwmo@purmerend.nl",
+                labels: ["Wmo", "wonen", "zorg", "welzijn", "mantelzorg", "Purmerend"],
+                opmerkingen: [{ tekst: "Bereikbaar ma-do 9:00-15:00, vr 9:00-13:00.", auteur: "Import", datum: "2024-01-01" }]
+            },
+            {
+                naam: "Humanitas - Vriendschappelijk Huisbezoek",
+                categorie: "Maatschappelijk werk",
+                adres: "Purmerend",
+                telefoon: "06-12 98 15 87",
+                email: "vhb.maatjes.purmerend@humanitas.nl",
+                labels: ["eenzaamheid", "huisbezoek", "vrijwilligers", "Purmerend"],
+                opmerkingen: [{ tekst: "Voor mensen die eenzaam zijn en behoefte hebben aan contact.", auteur: "Import", datum: "2024-01-01" }]
+            },
+            {
+                naam: "MEE Amstel en Zaan",
+                categorie: "Maatschappelijk werk",
+                adres: "Waterlandlaan 83, 1441 RS Purmerend",
+                telefoon: "0299-748 125",
+                email: "purmerendbeemster@mee-az.nl",
+                labels: ["wonen", "zorg", "opvoeding", "leren", "werk", "geldzaken", "Purmerend"],
+                opmerkingen: [{ tekst: "Alleen op afspraak.", auteur: "Import", datum: "2024-01-01" }]
+            },
+            {
+                naam: "Vereniging Yarden - Praten over Verlies",
+                categorie: "Maatschappelijk werk",
+                adres: "",
+                telefoon: "",
+                email: "ksc@vereniging-yarden.nl",
+                website: "https://pratenoververlies.nl/",
+                labels: ["rouw", "verlies", "overlijden"],
+                opmerkingen: [{ tekst: "Online informatiepunt voor steun bij verlies. Vrijwilligers luisteren.", auteur: "Import", datum: "2024-01-01" }]
+            },
+            {
+                naam: "Voorzet - Autisme ondersteuning",
+                categorie: "Maatschappelijk werk",
+                adres: "",
+                telefoon: "",
+                email: "",
+                website: "https://www.voorzet.nl/autisme/over/",
+                labels: ["autisme", "begeleiding", "structuur", "mantelzorg coaching"],
+                opmerkingen: [{ tekst: "Ondersteuning voor mensen met autisme op alle levensgebieden.", auteur: "Import", datum: "2024-01-01" }]
+            },
+            {
+                naam: "Waterlandswelzijn",
+                categorie: "Maatschappelijk werk",
+                adres: "Purmerend",
+                telefoon: "",
+                email: "",
+                labels: ["dagbesteding", "dementie", "psychiatrie", "NAH", "niet-aangeboren hersenletsel"],
+                opmerkingen: [{ tekst: "Dagbesteding voor mensen met dementie, psychiatrische problematiek of NAH. Vanuit Wmo.", auteur: "Import", datum: "2024-01-01" }]
+            }
+        ];
+
+        async function startImport() {
+            const btn = document.getElementById('btn-import');
+            btn.disabled = true;
+            document.getElementById('log').innerHTML = '';
+
+            log('🚀 Start import van ' + zorgverleners.length + ' zorgverleners...');
+
+            let success = 0;
+            let errors = 0;
+
+            for (const zv of zorgverleners) {
+                try {
+                    await db.collection('zorgverleners').add(zv);
+                    log(`✓ ${zv.naam} toegevoegd`, 'success');
+                    success++;
+                } catch (err) {
+                    log(`✗ Fout bij ${zv.naam}: ${err.message}`, 'error');
+                    errors++;
+                }
+                // Kleine pauze om Firebase niet te overbelasten
+                await new Promise(r => setTimeout(r, 100));
+            }
+
+            log('');
+            log(`📊 Import voltooid: ${success} succesvol, ${errors} fouten`, success > 0 ? 'success' : 'error');
+            log('Je kunt nu terug naar index.html om de zorgverleners te bekijken!');
+
+            btn.disabled = false;
+        }
+
+        async function clearDatabase() {
+            if (!confirm('Weet je zeker dat je ALLE zorgverleners wilt verwijderen?')) return;
+
+            const btn = document.getElementById('btn-clear');
+            btn.disabled = true;
+            document.getElementById('log').innerHTML = '';
+
+            log('🗑️ Database legen...');
+
+            try {
+                const snapshot = await db.collection('zorgverleners').get();
+                let count = 0;
+                for (const doc of snapshot.docs) {
+                    await doc.ref.delete();
+                    count++;
+                }
+                log(`✓ ${count} zorgverleners verwijderd`, 'success');
+            } catch (err) {
+                log(`✗ Fout: ${err.message}`, 'error');
+            }
+
+            btn.disabled = false;
+        }
+    </script>
+</body>
+</html>

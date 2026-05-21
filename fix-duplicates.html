@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>Fix Duplicaten - Sociale Kaart</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 900px; margin: 40px auto; padding: 20px; }
+        h1 { color: #2563eb; }
+        button { background: #2563eb; color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 10px 5px 10px 0; }
+        button:hover { background: #1d4ed8; }
+        button:disabled { background: #ccc; }
+        #log { background: #f5f5f5; padding: 15px; border-radius: 5px; max-height: 500px; overflow-y: auto; font-family: monospace; font-size: 13px; }
+        .log-item { margin: 5px 0; padding: 5px; border-bottom: 1px solid #ddd; }
+        .warning { background: #fff3cd; padding: 15px; border-radius: 5px; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Fix Duplicaten & Categorieën</h1>
+
+    <div class="warning">
+        <strong>Dit script doet het volgende:</strong>
+        <ol>
+            <li>Verwijdert dubbele zorgverleners (houdt er één over)</li>
+            <li>Verandert "Ergotherapie" naar "Fysiotherapie" voor mensendieck/oefentherapie</li>
+        </ol>
+    </div>
+
+    <button id="btn-fix" onclick="fixDatabase()">🔧 Start Fix</button>
+
+    <div id="log"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script>
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const item = document.createElement('div');
+            item.className = 'log-item';
+            item.innerHTML = `<span style="color: ${type === 'success' ? 'green' : type === 'error' ? 'red' : type === 'warning' ? 'orange' : 'blue'}">
+                ${type === 'success' ? '✓' : type === 'error' ? '✗' : type === 'warning' ? '⚠' : 'ℹ'}</span> ${message}`;
+            logDiv.appendChild(item);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        async function fixDatabase() {
+            const btn = document.getElementById('btn-fix');
+            btn.disabled = true;
+            document.getElementById('log').innerHTML = '';
+
+            log('📥 Ophalen van alle zorgverleners...');
+
+            try {
+                const snapshot = await db.collection('zorgverleners').get();
+                const allDocs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                log(`Gevonden: ${allDocs.length} zorgverleners`);
+
+                // Groepeer op naam om duplicaten te vinden
+                const byName = {};
+                allDocs.forEach(doc => {
+                    const name = doc.naam.toLowerCase().trim();
+                    if (!byName[name]) byName[name] = [];
+                    byName[name].push(doc);
+                });
+
+                // Vind en verwijder duplicaten
+                let duplicatesRemoved = 0;
+                for (const [name, docs] of Object.entries(byName)) {
+                    if (docs.length > 1) {
+                        log(`Duplicaat gevonden: "${docs[0].naam}" (${docs.length}x)`, 'warning');
+                        // Houd de eerste, verwijder de rest
+                        for (let i = 1; i < docs.length; i++) {
+                            await db.collection('zorgverleners').doc(docs[i].id).delete();
+                            duplicatesRemoved++;
+                            log(`  → Duplicaat verwijderd (ID: ${docs[i].id})`, 'success');
+                        }
+                    }
+                }
+
+                log('');
+                log(`🗑️ ${duplicatesRemoved} duplicaten verwijderd`);
+
+                // Fix categorieën: Ergotherapie → Fysiotherapie voor mensendieck
+                log('');
+                log('🏷️ Categorieën aanpassen...');
+
+                let categoriesFixed = 0;
+                const refreshSnapshot = await db.collection('zorgverleners').get();
+
+                for (const doc of refreshSnapshot.docs) {
+                    const data = doc.data();
+
+                    // Als het Ergotherapie is en mensendieck/oefentherapie in labels of naam
+                    if (data.categorie === 'Ergotherapie') {
+                        const labels = (data.labels || []).join(' ').toLowerCase();
+                        const naam = (data.naam || '').toLowerCase();
+
+                        if (labels.includes('mensendieck') || labels.includes('oefentherapie') ||
+                            naam.includes('mensendieck') || naam.includes('oase')) {
+                            await db.collection('zorgverleners').doc(doc.id).update({
+                                categorie: 'Fysiotherapie'
+                            });
+                            log(`✓ "${data.naam}" → categorie gewijzigd naar Fysiotherapie`, 'success');
+                            categoriesFixed++;
+                        }
+                    }
+                }
+
+                log('');
+                log(`🏷️ ${categoriesFixed} categorieën aangepast`);
+                log('');
+                log('✅ Klaar! Ga terug naar index.html en ververs de pagina.', 'success');
+
+            } catch (err) {
+                log(`Fout: ${err.message}`, 'error');
+            }
+
+            btn.disabled = false;
+        }
+    </script>
+</body>
+</html>

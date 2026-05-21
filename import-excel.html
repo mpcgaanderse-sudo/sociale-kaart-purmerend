@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Import - Sociale Kaart Purmerend</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: #f1f5f9; color: #1e293b; min-height: 100vh; }
+
+        header {
+            background: #2563eb; color: white;
+            padding: 14px 24px; display: flex; align-items: center; gap: 12px;
+        }
+        header h1 { font-size: 1.05rem; font-weight: 600; }
+        header a { color: rgba(255,255,255,0.85); text-decoration: none; font-size: 0.875rem; margin-left: auto; }
+        header a:hover { color: white; }
+
+        .container { max-width: 1050px; margin: 28px auto; padding: 0 20px; display: flex; flex-direction: column; gap: 20px; }
+
+        .card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .card h2 { font-size: 0.95rem; font-weight: 600; margin-bottom: 16px; }
+
+        /* Steps */
+        .steps { display: flex; align-items: center; gap: 0; }
+        .step { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: #94a3b8; flex-shrink: 0; }
+        .step.active { color: #2563eb; font-weight: 600; }
+        .step.done { color: #16a34a; }
+        .step-num { width: 26px; height: 26px; border-radius: 50%; background: #e2e8f0; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.75rem; flex-shrink: 0; }
+        .step.active .step-num { background: #2563eb; color: white; }
+        .step.done .step-num { background: #16a34a; color: white; }
+        .step-line { flex: 1; height: 2px; background: #e2e8f0; margin: 0 10px; min-width: 20px; }
+
+        /* Upload */
+        .upload-zone { border: 2px dashed #cbd5e1; border-radius: 10px; padding: 36px; text-align: center; cursor: pointer; transition: all 0.2s; background: #fafafa; }
+        .upload-zone:hover, .upload-zone.drag-over { border-color: #2563eb; background: #eff6ff; }
+        .upload-zone p { color: #64748b; font-size: 0.875rem; }
+        .upload-zone p strong { color: #2563eb; }
+        .upload-zone input { display: none; }
+
+        /* Template info */
+        .info-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 16px; font-size: 0.825rem; color: #475569; margin-bottom: 16px; }
+        .info-box strong { color: #1e293b; }
+
+        /* Column mapping */
+        .mapping-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        @media (max-width: 600px) { .mapping-grid { grid-template-columns: 1fr; } }
+
+        .mapping-row { display: contents; }
+        .mapping-label { font-size: 0.875rem; font-weight: 500; color: #374151; display: flex; align-items: center; gap: 6px; }
+        .mapping-label .req { color: #2563eb; font-size: 0.75rem; }
+        .mapping-label .hint { color: #94a3b8; font-size: 0.75rem; font-weight: 400; }
+
+        select {
+            width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px;
+            font-size: 0.85rem; color: #1e293b; background: white; cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 10px center;
+            padding-right: 30px;
+        }
+        select:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+
+        .mapping-section { border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; }
+        .mapping-section h3 { font-size: 0.85rem; font-weight: 600; color: #374151; margin-bottom: 12px; }
+
+        .field-row { display: grid; grid-template-columns: 160px 1fr; gap: 10px; align-items: center; margin-bottom: 10px; }
+        .field-row:last-child { margin-bottom: 0; }
+        .field-label { font-size: 0.82rem; font-weight: 500; color: #374151; }
+        .field-label .req { color: #ef4444; }
+
+        /* Sample table */
+        .sample-wrap { overflow-x: auto; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 0.78rem; margin-top: 12px; }
+        .sample-wrap table { border-collapse: collapse; width: 100%; }
+        .sample-wrap th { background: #f1f5f9; padding: 6px 10px; text-align: left; color: #475569; font-weight: 600; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+        .sample-wrap td { padding: 5px 10px; border-bottom: 1px solid #f8fafc; color: #334155; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sample-wrap tr:last-child td { border-bottom: none; }
+
+        /* Contact info box */
+        .contact-info { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 10px 12px; font-size: 0.8rem; color: #1e40af; margin-top: 8px; }
+
+        /* Preview table */
+        .table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid #e2e8f0; }
+        table.preview { border-collapse: collapse; width: 100%; font-size: 0.8rem; }
+        table.preview th { background: #f8fafc; padding: 9px 11px; text-align: left; font-weight: 600; color: #475569; white-space: nowrap; border-bottom: 1px solid #e2e8f0; }
+        table.preview td { padding: 7px 11px; border-bottom: 1px solid #f1f5f9; color: #334155; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        table.preview tr:last-child td { border-bottom: none; }
+        table.preview tr.row-err { background: #fff5f5; }
+        table.preview tr.row-skip { background: #fafafa; opacity: 0.5; }
+
+        .badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
+        .badge-ok { background: #dcfce7; color: #166534; }
+        .badge-err { background: #fee2e2; color: #991b1b; }
+        .badge-skip { background: #f1f5f9; color: #64748b; }
+        .badge-dup { background: #fef9c3; color: #92400e; }
+
+        .dup-box { background: #fefce8; border: 1px solid #fde68a; border-radius: 8px; padding: 14px 16px; margin-bottom: 16px; }
+        .dup-box h3 { font-size: 0.85rem; font-weight: 600; margin-bottom: 12px; color: #92400e; }
+        .radio-opts { display: flex; flex-direction: column; gap: 10px; }
+        .radio-opt { display: flex; align-items: flex-start; gap: 10px; font-size: 0.875rem; cursor: pointer; }
+        .radio-opt input[type=radio] { margin-top: 3px; cursor: pointer; flex-shrink: 0; }
+        .radio-opt strong { display: block; color: #1e293b; }
+        .radio-opt em { font-style: normal; color: #64748b; font-size: 0.78rem; }
+
+        /* Buttons */
+        .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; border-radius: 8px; font-size: 0.875rem; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; text-decoration: none; }
+        .btn-primary { background: #2563eb; color: white; }
+        .btn-primary:hover:not(:disabled) { background: #1d4ed8; }
+        .btn-primary:disabled { background: #93c5fd; cursor: not-allowed; }
+        .btn-ghost { background: transparent; color: #64748b; border: 1px solid #e2e8f0; }
+        .btn-ghost:hover { background: #f8fafc; }
+        .btn-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 18px; }
+
+        /* Progress */
+        .progress-bar { height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin: 12px 0; }
+        .progress-fill { height: 100%; background: #2563eb; border-radius: 4px; transition: width 0.3s; }
+        .log { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; max-height: 280px; overflow-y: auto; font-family: monospace; font-size: 0.78rem; }
+        .log-line { padding: 2px 0; border-bottom: 1px solid #f1f5f9; }
+        .log-ok { color: #16a34a; }
+        .log-err { color: #dc2626; }
+        .log-info { color: #2563eb; }
+
+        /* Alert */
+        .alert { padding: 10px 14px; border-radius: 7px; font-size: 0.85rem; display: flex; gap: 8px; align-items: flex-start; margin-bottom: 14px; }
+        .alert-info { background: #dbeafe; color: #1e40af; }
+        .alert-warn { background: #fef9c3; color: #854d0e; }
+        .alert-err { background: #fee2e2; color: #991b1b; }
+        .alert-ok { background: #dcfce7; color: #166534; }
+
+        /* Summary */
+        .stats { display: flex; gap: 20px; flex-wrap: wrap; font-size: 0.875rem; color: #64748b; margin-bottom: 14px; }
+        .stats strong { color: #1e293b; }
+
+        .cat-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+        .cat-chip { background: #dbeafe; color: #1d4ed8; border-radius: 4px; padding: 2px 8px; font-size: 0.78rem; }
+
+        .download-link { display: inline-flex; align-items: center; gap: 5px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 7px 14px; font-size: 0.82rem; font-weight: 500; color: #475569; cursor: pointer; text-decoration: none; }
+        .download-link:hover { background: #e2e8f0; }
+
+        .hidden { display: none !important; }
+        .divider { border: none; border-top: 1px solid #f1f5f9; margin: 16px 0; }
+    </style>
+</head>
+<body>
+
+<header>
+    <svg width="26" height="26" viewBox="0 0 48 48" fill="none">
+        <circle cx="24" cy="24" r="24" fill="rgba(255,255,255,0.2)"/>
+        <path d="M24 12v24M12 24h24" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+    </svg>
+    <h1>Bestand importeren</h1>
+    <a href="index.html">← Terug naar de app</a>
+</header>
+
+<div class="container">
+
+    <!-- Step bar -->
+    <div class="card" style="padding:16px 24px;">
+        <div class="steps">
+            <div class="step" id="s1"><div class="step-num">1</div><span>Bestand</span></div>
+            <div class="step-line"></div>
+            <div class="step" id="s2"><div class="step-num">2</div><span>Kolommen koppelen</span></div>
+            <div class="step-line"></div>
+            <div class="step" id="s3"><div class="step-num">3</div><span>Controleren</span></div>
+            <div class="step-line"></div>
+            <div class="step" id="s4"><div class="step-num">4</div><span>Importeren</span></div>
+        </div>
+    </div>
+
+    <!-- STAP 1: Upload -->
+    <div class="card" id="sec-upload">
+        <h2>Stap 1 — Kies een bestand</h2>
+
+        <div class="info-box">
+            Je kunt <strong>elk Excel- of CSV-bestand</strong> uploaden — ook als de kolommen anders heten
+            of als telefoon, e-mail en adres in één cel staan. In de volgende stap koppel je zelf welke kolom
+            waar naartoe gaat.
+            <br><br>
+            <strong>Ondersteunde formaten:</strong> .xlsx, .xls, .csv — max. 50 MB
+        </div>
+
+        <div style="margin-bottom:14px;">
+            <a class="download-link" id="btn-dl-template">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download voorbeeldbestand (.csv)
+            </a>
+        </div>
+
+        <div class="upload-zone" id="upload-zone">
+            <input type="file" id="file-input" accept=".xlsx,.xls,.csv">
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" style="margin-bottom:10px;">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <p><strong>Klik om een bestand te kiezen</strong> of sleep het hierheen</p>
+            <p style="margin-top:4px; font-size:0.78rem; color:#94a3b8;">.xlsx · .xls · .csv · max 50 MB</p>
+        </div>
+    </div>
+
+    <!-- STAP 2: Kolommen koppelen -->
+    <div class="card hidden" id="sec-mapping">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+            <h2 style="margin:0;">Stap 2 — Koppel de kolommen</h2>
+            <button class="btn btn-ghost btn-sm" id="btn-reset-mapping">Ander bestand</button>
+        </div>
+
+        <div id="mapping-alert" class="alert alert-info hidden"></div>
+
+        <!-- Voorbeeld van de data -->
+        <p style="font-size:0.82rem; color:#64748b; margin-bottom:6px;"><strong>Gevonden kolommen</strong> (eerste 3 rijen als voorbeeld):</p>
+        <div class="sample-wrap" id="sample-table"></div>
+
+        <hr class="divider">
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+            <!-- Verplichte velden -->
+            <div class="mapping-section">
+                <h3>Verplichte velden</h3>
+                <div class="field-row">
+                    <div class="field-label">Naam <span class="req">*</span></div>
+                    <select id="map-naam"><option value="">— kies kolom —</option></select>
+                </div>
+                <div class="field-row">
+                    <div class="field-label">Categorie <span class="req">*</span></div>
+                    <select id="map-categorie">
+                        <option value="">— kies kolom —</option>
+                        <option value="__default__">Vaste categorie instellen ▼</option>
+                    </select>
+                </div>
+                <div class="field-row hidden" id="row-default-cat">
+                    <div class="field-label" style="color:#64748b; font-size:0.78rem;">Vaste categorie:</div>
+                    <select id="default-cat">
+                        <option value="">Kies...</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Contactinfo -->
+            <div class="mapping-section">
+                <h3>Contactinformatie</h3>
+                <div class="field-row">
+                    <div class="field-label">Contactblok</div>
+                    <select id="map-contact-blok">
+                        <option value="">— niet gebruiken —</option>
+                    </select>
+                </div>
+                <div class="contact-info" id="contact-blok-info">
+                    <strong>Contactblok:</strong> als telefoon, e-mail, adres en website in één cel staan,
+                    kies dan hier die kolom. De gegevens worden automatisch uitgesplitst.
+                </div>
+                <hr class="divider">
+                <div class="field-row">
+                    <div class="field-label">Telefoon</div>
+                    <select id="map-telefoon"><option value="">— niet koppelen —</option></select>
+                </div>
+                <div class="field-row">
+                    <div class="field-label">E-mail</div>
+                    <select id="map-email"><option value="">— niet koppelen —</option></select>
+                </div>
+                <div class="field-row">
+                    <div class="field-label">Adres</div>
+                    <select id="map-adres"><option value="">— niet koppelen —</option></select>
+                </div>
+                <div class="field-row">
+                    <div class="field-label">Website</div>
+                    <select id="map-website"><option value="">— niet koppelen —</option></select>
+                </div>
+            </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:16px;">
+            <!-- Labels -->
+            <div class="mapping-section">
+                <h3>Labels / Specialisaties</h3>
+                <div class="field-row">
+                    <div class="field-label">Labels</div>
+                    <select id="map-labels"><option value="">— niet koppelen —</option></select>
+                </div>
+                <p style="font-size:0.75rem; color:#94a3b8; margin-top:6px;">
+                    Komma's, puntkomma's of regeleinden worden automatisch als scheidingsteken herkend.
+                    Asterisken (*) aan het begin worden verwijderd.
+                </p>
+            </div>
+
+            <!-- Opmerking -->
+            <div class="mapping-section">
+                <h3>Opmerking / Wachttijd</h3>
+                <div class="field-row">
+                    <div class="field-label">Opmerking</div>
+                    <select id="map-opmerking"><option value="">— niet koppelen —</option></select>
+                </div>
+                <div class="field-row">
+                    <div class="field-label">Wachttijd</div>
+                    <select id="map-wachttijd"><option value="">— niet koppelen —</option></select>
+                </div>
+                <p style="font-size:0.75rem; color:#94a3b8; margin-top:6px;">
+                    Wachttijd wordt als extra opmerking toegevoegd.
+                </p>
+            </div>
+        </div>
+
+        <div class="btn-row">
+            <button class="btn btn-primary" id="btn-apply-mapping">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                Doorgaan naar preview
+            </button>
+        </div>
+    </div>
+
+    <!-- STAP 3: Preview -->
+    <div class="card hidden" id="sec-preview">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+            <h2 style="margin:0;">Stap 3 — Controleer de gegevens</h2>
+            <div style="display:flex;gap:8px;">
+                <button class="btn btn-ghost" id="btn-back-mapping">← Mapping aanpassen</button>
+                <button class="btn btn-ghost" id="btn-reset-preview">Ander bestand</button>
+            </div>
+        </div>
+
+        <div class="stats" id="preview-stats"></div>
+
+        <div id="dup-box" class="dup-box hidden">
+            <h3>⚠ Mogelijke dubbelingen gevonden — wat moet er mee gebeuren?</h3>
+            <div class="radio-opts">
+                <label class="radio-opt">
+                    <input type="radio" name="dup-strat" value="skip" checked>
+                    <div><strong>Overslaan</strong><em>Rijen waarvan de naam al bestaat worden niet geïmporteerd</em></div>
+                </label>
+                <label class="radio-opt">
+                    <input type="radio" name="dup-strat" value="update">
+                    <div><strong>Bijwerken</strong><em>Bestaande gegevens worden overschreven met de nieuwe data; opmerkingen blijven bewaard</em></div>
+                </label>
+                <label class="radio-opt">
+                    <input type="radio" name="dup-strat" value="add">
+                    <div><strong>Toch toevoegen</strong><em>Altijd als nieuw item importeren, ook als de naam al bestaat</em></div>
+                </label>
+            </div>
+        </div>
+
+        <div id="preview-alert" class="hidden"></div>
+
+        <div class="table-wrap">
+            <table class="preview">
+                <thead>
+                    <tr>
+                        <th>Rij</th>
+                        <th>Status</th>
+                        <th>Naam</th>
+                        <th>Categorie</th>
+                        <th>Adres</th>
+                        <th>Telefoon</th>
+                        <th>E-mail</th>
+                        <th>Labels</th>
+                        <th>Opmerking</th>
+                    </tr>
+                </thead>
+                <tbody id="preview-tbody"></tbody>
+            </table>
+        </div>
+
+        <div class="btn-row">
+            <button class="btn btn-primary" id="btn-do-import" disabled>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                Importeren starten
+            </button>
+            <span id="import-hint" style="font-size:0.8rem; color:#64748b;"></span>
+        </div>
+    </div>
+
+    <!-- STAP 4: Importeren -->
+    <div class="card hidden" id="sec-import">
+        <h2>Stap 4 — Importeren</h2>
+        <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+        <p id="prog-label" style="font-size:0.85rem; color:#64748b; margin-bottom:10px;">Bezig...</p>
+        <div class="log" id="import-log"></div>
+        <div class="btn-row">
+            <a href="index.html" class="btn btn-primary hidden" id="btn-go-app">Ga naar de app</a>
+            <button class="btn btn-ghost hidden" id="btn-more">Nog een bestand importeren</button>
+        </div>
+    </div>
+
+</div>
+
+<!-- SheetJS -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+
+<script>
+(function () {
+    'use strict';
+
+    const CATEGORIEEN = [
+        'GGZ', 'Jeugd GGZ', 'Verslavingszorg', 'Maatschappelijk werk',
+        'Fysiotherapie', 'Diëtetiek', 'Logopedie', 'Podotherapie',
+        'Thuiszorg', 'Apotheek', 'Verloskundige', 'Tandarts', 'Overig'
+    ];
+
+    let db = null;
+    let rawRows = [];       // ruwe data na parsen
+    let detectedCols = [];  // kolomnamen uit het bestand
+    let mappedRows = [];    // data na kolomkoppeling
+
+    try {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+    } catch (e) { console.error('Firebase:', e); }
+
+    // Vul standaard-categorie select
+    const defCatSel = document.getElementById('default-cat');
+    CATEGORIEEN.forEach(c => {
+        const o = document.createElement('option');
+        o.value = c; o.textContent = c;
+        defCatSel.appendChild(o);
+    });
+
+    // Step indicator
+    function setStep(n) {
+        ['s1','s2','s3','s4'].forEach((id, i) => {
+            const el = document.getElementById(id);
+            el.classList.remove('active','done');
+            if (i + 1 < n) el.classList.add('done');
+            else if (i + 1 === n) el.classList.add('active');
+        });
+    }
+    setStep(1);
+
+    // Template download
+    document.getElementById('btn-dl-template').addEventListener('click', () => {
+        const rows = [
+            'naam,categorie,adres,telefoon,email,website,labels,opmerking',
+            '"Fysiotherapie Voorbeeld",Fysiotherapie,"Hoofdstraat 1, Purmerend",0299-123456,info@voorbeeld.nl,https://voorbeeld.nl,"fysiotherapie, sport",Geen wachtlijst',
+            '"GGZ Praktijk",GGZ,"Waterlandlaan 81, Purmerend",088-1234567,aanmeld@test.nl,,"angst, depressie","Wachttijd ca. 4 weken"'
+        ];
+        const blob = new Blob(['﻿' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'sociale-kaart-template.csv';
+        a.click();
+    });
+
+    // --- UPLOAD ---
+    const uploadZone = document.getElementById('upload-zone');
+    const fileInput = document.getElementById('file-input');
+
+    uploadZone.addEventListener('click', () => fileInput.click());
+    uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+    uploadZone.addEventListener('drop', e => {
+        e.preventDefault(); uploadZone.classList.remove('drag-over');
+        if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', e => { if (e.target.files[0]) processFile(e.target.files[0]); });
+
+    function processFile(file) {
+        if (file.size > 50 * 1024 * 1024) { alert('Bestand is te groot (max 50 MB).'); return; }
+        const ext = file.name.split('.').pop().toLowerCase();
+        const reader = new FileReader();
+        reader.onload = e => {
+            try {
+                if (ext === 'csv') {
+                    rawRows = parseCSV(e.target.result);
+                } else {
+                    const wb = XLSX.read(e.target.result, { type: 'array' });
+                    const ws = wb.Sheets[wb.SheetNames[0]];
+                    rawRows = XLSX.utils.sheet_to_json(ws, { defval: '', raw: false });
+                }
+                if (rawRows.length === 0) { alert('Geen gegevens gevonden in het bestand.'); return; }
+                detectedCols = Object.keys(rawRows[0]);
+                showMappingStep();
+            } catch (err) {
+                alert('Fout bij inlezen bestand: ' + err.message);
+            }
+        };
+        if (ext === 'csv') reader.readAsText(file, 'UTF-8');
+        else reader.readAsArrayBuffer(file);
+    }
+
+    function parseCSV(text) {
+        text = text.replace(/^﻿/, '');
+        const lines = text.split(/\r?\n/).filter(l => l.trim());
+        if (lines.length < 2) throw new Error('Te weinig rijen (minimaal 1 kopregel + 1 dataregel).');
+        const headers = parseLine(lines[0]).map(h => h.trim());
+        return lines.slice(1).map(line => {
+            const vals = parseLine(line);
+            const row = {};
+            headers.forEach((h, i) => { row[h] = (vals[i] || '').trim(); });
+            return row;
+        }).filter(row => Object.values(row).some(v => v.trim()));
+    }
+
+    function parseLine(line) {
+        const result = []; let cur = ''; let inQ = false;
+        for (let i = 0; i < line.length; i++) {
+            const c = line[i];
+            if (c === '"') {
+                if (inQ && line[i+1] === '"') { cur += '"'; i++; }
+                else inQ = !inQ;
+            } else if ((c === ',' || c === ';') && !inQ) {
+                result.push(cur); cur = '';
+            } else cur += c;
+        }
+        result.push(cur);
+        return result;
+    }
+
+    // --- MAPPING STAP ---
+    function showMappingStep() {
+        setStep(2);
+        document.getElementById('sec-upload').classList.add('hidden');
+        document.getElementById('sec-mapping').classList.remove('hidden');
+
+        // Render sample table
+        renderSampleTable();
+
+        // Populate all selects with column names
+        const selects = ['map-naam','map-categorie','map-contact-blok',
+            'map-telefoon','map-email','map-adres','map-website',
+            'map-labels','map-opmerking','map-wachttijd'];
+
+        selects.forEach(id => {
+            const sel = document.getElementById(id);
+            // Remove all but first option(s)
+            while (sel.options.length > (id === 'map-categorie' ? 2 : 1)) sel.remove(sel.options.length - 1);
+            detectedCols.forEach(col => {
+                const opt = document.createElement('option');
+                opt.value = col; opt.textContent = col;
+                sel.appendChild(opt);
+            });
+        });
+
+        // Auto-guess mappings
+        autoGuessMappings();
+
+        // Show/hide default cat row
+        document.getElementById('map-categorie').addEventListener('change', function() {
+            document.getElementById('row-default-cat').classList.toggle('hidden', this.value !== '__default__');
+        });
+    }
+
+    function autoGuessMappings() {
+        const guesses = {
+            'map-naam': ['naam', 'name', 'instelling', 'organisatie', 'praktijk', 'ggz instelling', 'bedrijf'],
+            'map-categorie': ['categorie', 'category', 'type', 'soort'],
+            'map-contact-blok': ['contact', 'contactgegevens', 'contactinfo', 'gegevens'],
+            'map-telefoon': ['telefoon', 'tel', 'phone', 'telefonnummer', 'telefoonnummer'],
+            'map-email': ['email', 'e-mail', 'mail'],
+            'map-adres': ['adres', 'address', 'straat', 'locatie'],
+            'map-website': ['website', 'url', 'web', 'site'],
+            'map-labels': ['labels', 'aandoening', 'aandoeningen', 'specialisatie', 'specialisaties', 'tags', 'klachten'],
+            'map-opmerking': ['opmerking', 'opmerkingen', 'notitie', 'toelichting', 'info'],
+            'map-wachttijd': ['wachttijd', 'wachttijden', 'wacht', 'waiting'],
+        };
+
+        const normalizedCols = detectedCols.map(c => ({ orig: c, norm: c.toLowerCase().trim() }));
+
+        Object.entries(guesses).forEach(([selId, keywords]) => {
+            const sel = document.getElementById(selId);
+            for (const kw of keywords) {
+                const match = normalizedCols.find(c => c.norm.includes(kw) || kw.includes(c.norm));
+                if (match) {
+                    sel.value = match.orig;
+                    break;
+                }
+            }
+        });
+
+        // Show default-cat row if no categorie col found
+        const catSel = document.getElementById('map-categorie');
+        if (!catSel.value || catSel.value === '') {
+            catSel.value = '__default__';
+            document.getElementById('row-default-cat').classList.remove('hidden');
+        }
+    }
+
+    function renderSampleTable() {
+        const sample = rawRows.slice(0, 3);
+        const wrap = document.getElementById('sample-table');
+        let html = '<table><thead><tr>';
+        detectedCols.forEach(c => { html += `<th>${esc(c)}</th>`; });
+        html += '</tr></thead><tbody>';
+        sample.forEach(row => {
+            html += '<tr>';
+            detectedCols.forEach(c => {
+                const val = String(row[c] || '').substring(0, 60);
+                html += `<td title="${esc(String(row[c]||''))}">${esc(val)}${String(row[c]||'').length > 60 ? '…' : ''}</td>`;
+            });
+            html += '</tr>';
+        });
+        html += '</tbody></table>';
+        wrap.innerHTML = html;
+    }
+
+    // --- APPLY MAPPING ---
+    document.getElementById('btn-apply-mapping').addEventListener('click', applyMapping);
+
+    function applyMapping() {
+        const get = id => document.getElementById(id).value;
+
+        const naamCol = get('map-naam');
+        const catCol = get('map-categorie');
+        const defaultCat = get('default-cat');
+        const contactBlokCol = get('map-contact-blok');
+        const telCol = get('map-telefoon');
+        const emailCol = get('map-email');
+        const adresCol = get('map-adres');
+        const websiteCol = get('map-website');
+        const labelsCol = get('map-labels');
+        const opmerking1Col = get('map-opmerking');
+        const wachttijdCol = get('map-wachttijd');
+
+        if (!naamCol) {
+            alert('Kies minimaal een kolom voor "Naam".');
+            return;
+        }
+        if (catCol === '__default__' && !defaultCat) {
+            alert('Kies een vaste categorie of koppel een categorie-kolom.');
+            return;
+        }
+
+        mappedRows = [];
+
+        rawRows.forEach((raw, i) => {
+            const naam = clean(raw[naamCol] || '');
+
+            // Skip lege rijen en sectiekoppen
+            if (!naam) return;
+            if (isSectionHeader(raw)) return;
+
+            // Categorie
+            let categorie = '';
+            if (catCol === '__default__') {
+                categorie = defaultCat;
+            } else if (catCol) {
+                categorie = matchCategorie(clean(raw[catCol] || ''));
+            }
+            if (!categorie) categorie = 'Overig';
+
+            // Contact blok extraheren
+            let telefoon = telCol ? clean(raw[telCol] || '') : '';
+            let email = emailCol ? clean(raw[emailCol] || '') : '';
+            let adres = adresCol ? clean(raw[adresCol] || '') : '';
+            let website = websiteCol ? clean(raw[websiteCol] || '') : '';
+
+            if (contactBlokCol && raw[contactBlokCol]) {
+                const extracted = extractContact(String(raw[contactBlokCol]));
+                if (!telefoon && extracted.telefoon) telefoon = extracted.telefoon;
+                if (!email && extracted.email) email = extracted.email;
+                if (!adres && extracted.adres) adres = extracted.adres;
+                if (!website && extracted.website) website = extracted.website;
+            }
+
+            // Labels
+            let labels = [];
+            if (labelsCol && raw[labelsCol]) {
+                labels = parseLabels(String(raw[labelsCol]));
+            }
+
+            // Opmerkingen
+            const opmerkingParts = [];
+            if (opmerking1Col && raw[opmerking1Col]) {
+                const o = clean(raw[opmerking1Col]);
+                if (o) opmerkingParts.push(o);
+            }
+            if (wachttijdCol && raw[wachttijdCol]) {
+                const w = clean(raw[wachttijdCol]);
+                if (w && w.toLowerCase() !== 'geen info') opmerkingParts.push('Wachttijd: ' + w);
+            }
+            const opmerkingen = opmerkingParts.length > 0
+                ? [{ tekst: opmerkingParts.join(' | '), auteur: 'Import', datum: new Date().toISOString().split('T')[0] }]
+                : [];
+
+            // Validatie
+            const fouten = [];
+            if (!naam) fouten.push('naam ontbreekt');
+
+            mappedRows.push({
+                _rij: i + 2,
+                _fouten: fouten,
+                _ok: fouten.length === 0,
+                naam,
+                categorie,
+                adres,
+                telefoon,
+                email,
+                website,
+                labels,
+                opmerkingen
+            });
+        });
+
+        showPreview();
+    }
+
+    function isSectionHeader(row) {
+        // Rij heeft maar 1 kolom met waarde EN die waarde is volledig hoofdletters of een bekende header
+        const vals = Object.values(row).map(v => String(v || '').trim()).filter(Boolean);
+        if (vals.length > 2) return false;
+        if (vals.length === 1) {
+            const v = vals[0];
+            // Alles hoofdletters of sectiepatroon
+            if (v === v.toUpperCase() && v.length > 3) return true;
+            if (/^(volwassenen|jeugd|kinderen|overig|verslavings)/i.test(v)) return true;
+        }
+        return false;
+    }
+
+    function matchCategorie(input) {
+        if (!input) return 'Overig';
+        const exact = CATEGORIEEN.find(c => c.toLowerCase() === input.toLowerCase());
+        if (exact) return exact;
+        const partial = CATEGORIEEN.find(c =>
+            input.toLowerCase().includes(c.toLowerCase()) ||
+            c.toLowerCase().includes(input.toLowerCase().substring(0, 6))
+        );
+        return partial || 'Overig';
+    }
+
+    function extractContact(text) {
+        const result = { telefoon: '', email: '', adres: '', website: '' };
+
+        // Telefoonnummers (NL formaten)
+        const telMatch = text.match(/(?:0\d{1,2}[-\s–]?\d{3,4}[-\s–]?\d{4,5}|0\d{8,9}|06[-\s]?\d{8}|088[-\s]\d{3}[-\s]\d{2}[-\s]\d{2}|085[-\s]\d{3}[-\s]\d{4})/);
+        if (telMatch) result.telefoon = telMatch[0].replace(/\s+/g, ' ').trim();
+
+        // E-mail
+        const emailMatch = text.match(/[\w.+%-]+@[\w.-]+\.[a-z]{2,}/i);
+        if (emailMatch) result.email = emailMatch[0].toLowerCase().trim();
+
+        // Website
+        const webMatch = text.match(/https?:\/\/[^\s\n,)]+/i);
+        if (webMatch) result.website = webMatch[0].trim();
+
+        // Adres: zoek naar regel met straat + huisnummer + postcode of plaatsnaam
+        const lines = text.split(/[\n\r]+/).map(l => l.trim()).filter(Boolean);
+        for (const line of lines) {
+            // Patroon: "Straatnaam 12, 1234 AB Plaatsnaam" of "Straatnaam 12B"
+            if (/^[A-Za-zÀ-ÿ].*\s+\d+[a-z]?\s*[,|]?\s*\d{4}\s*[A-Z]{2}/i.test(line) ||
+                /^[A-Za-zÀ-ÿ].*(straat|laan|weg|plein|kade|singel|dreef|dijk|allee|pad|ring|markt|woerd|lhaven)\s+\d+/i.test(line) ||
+                /^\d{4}\s*[A-Z]{2}\s+\w+/.test(line)) {
+                // Skip als het telefoon of email bevat
+                if (!line.includes('@') && !/^\d{3}/.test(line)) {
+                    result.adres = line.replace(/^[,\s]+|[,\s]+$/g, '').trim();
+                    break;
+                }
+            }
+        }
+
+        return result;
+    }
+
+    function parseLabels(raw) {
+        // Splits op komma, puntkomma, regeleinde of bullet (*/)
+        return raw
+            .split(/[,;*\n\r]+/)
+            .map(l => l.replace(/^[\s*•\-–]+|[\s]+$/g, '').trim())
+            .filter(l => l.length > 1 && l.length < 60);
+    }
+
+    function clean(str) {
+        return String(str || '')
+            .replace(/\r?\n/g, ' ')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
+    }
+
+    // --- PREVIEW ---
+    async function showPreview() {
+        setStep(3);
+        document.getElementById('sec-mapping').classList.add('hidden');
+        document.getElementById('sec-preview').classList.remove('hidden');
+
+        // Laad bestaande namen uit Firebase om dubbelingen te detecteren
+        const bestaandeNamen = new Map(); // naam_lower -> doc id
+        if (db) {
+            try {
+                const snap = await db.collection('zorgverleners').get();
+                snap.docs.forEach(doc => {
+                    const n = (doc.data().naam || '').toLowerCase().trim();
+                    if (n) bestaandeNamen.set(n, doc.id);
+                });
+            } catch (e) { console.warn('Kon bestaande namen niet laden:', e); }
+        }
+
+        // Markeer dubbelingen
+        mappedRows.forEach(row => {
+            const key = row.naam.toLowerCase().trim();
+            row._duplicaat = row._ok && bestaandeNamen.has(key);
+            row._bestaandId = bestaandeNamen.get(key) || null;
+        });
+
+        const okRows = mappedRows.filter(r => r._ok);
+        const errRows = mappedRows.filter(r => !r._ok);
+        const dupRows = mappedRows.filter(r => r._duplicaat);
+
+        document.getElementById('preview-stats').innerHTML = `
+            <span><strong>${mappedRows.length}</strong> rijen</span>
+            <span style="color:#16a34a;"><strong>${okRows.length}</strong> gereed</span>
+            ${dupRows.length > 0 ? `<span style="color:#92400e;"><strong>${dupRows.length}</strong> mogelijke dubbeling${dupRows.length !== 1 ? 'en' : ''}</span>` : ''}
+            ${errRows.length > 0 ? `<span style="color:#dc2626;"><strong>${errRows.length}</strong> met fouten</span>` : ''}
+        `;
+
+        // Toon dubbeling-strategie alleen als er dubbelingen zijn
+        document.getElementById('dup-box').classList.toggle('hidden', dupRows.length === 0);
+
+        const alertEl = document.getElementById('preview-alert');
+        if (errRows.length > 0) {
+            alertEl.className = 'alert alert-warn';
+            alertEl.textContent = `${errRows.length} rij${errRows.length !== 1 ? 'en worden' : ' wordt'} overgeslagen vanwege fouten.`;
+            alertEl.classList.remove('hidden');
+        } else {
+            alertEl.classList.add('hidden');
+        }
+
+        const tbody = document.getElementById('preview-tbody');
+        tbody.innerHTML = '';
+        mappedRows.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.className = !row._ok ? 'row-err' : '';
+
+            let badge;
+            if (!row._ok) {
+                badge = `<span class="badge badge-err" title="${row._fouten.join(', ')}">✗ ${row._fouten[0]}</span>`;
+            } else if (row._duplicaat) {
+                badge = `<span class="badge badge-dup" title="Naam bestaat al in de database">⚠ Dubbeling</span>`;
+            } else {
+                badge = `<span class="badge badge-ok">✓ Nieuw</span>`;
+            }
+
+            tr.innerHTML = `
+                <td>${row._rij}</td>
+                <td>${badge}</td>
+                <td title="${esc(row.naam)}">${esc(row.naam) || '<em style="color:#94a3b8">leeg</em>'}</td>
+                <td>${esc(row.categorie)}</td>
+                <td title="${esc(row.adres)}">${esc(row.adres.substring(0,35))}${row.adres.length>35?'…':''}</td>
+                <td>${esc(row.telefoon)}</td>
+                <td title="${esc(row.email)}">${esc(row.email.substring(0,25))}${row.email.length>25?'…':''}</td>
+                <td title="${esc(row.labels.join(', '))}">${row.labels.slice(0,3).map(esc).join(', ')}${row.labels.length>3?'…':''}</td>
+                <td title="${esc(row.opmerkingen[0]?.tekst||'')}">${esc((row.opmerkingen[0]?.tekst||'').substring(0,40))}${(row.opmerkingen[0]?.tekst||'').length>40?'…':''}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        const btn = document.getElementById('btn-do-import');
+        const hint = document.getElementById('import-hint');
+        if (okRows.length === 0) {
+            btn.disabled = true;
+            hint.textContent = 'Geen geldige rijen gevonden. Pas de kolomkoppeling aan.';
+        } else {
+            btn.disabled = false;
+            hint.textContent = errRows.length > 0 ? `${errRows.length} rij${errRows.length !== 1 ? 'en' : ''} met fouten worden overgeslagen.` : '';
+        }
+    }
+
+    // --- IMPORT ---
+    document.getElementById('btn-do-import').addEventListener('click', startImport);
+
+    async function startImport() {
+        if (!db) { alert('Geen Firebase verbinding. Controleer firebase-config.js.'); return; }
+
+        const stratEl = document.querySelector('input[name="dup-strat"]:checked');
+        const strategy = stratEl ? stratEl.value : 'skip';
+        const stratLabel = { skip: 'dubbelingen overslaan', update: 'bijwerken', add: 'altijd toevoegen' }[strategy];
+
+        setStep(4);
+        document.getElementById('sec-preview').classList.add('hidden');
+        document.getElementById('sec-import').classList.remove('hidden');
+
+        const toImport = mappedRows.filter(r => r._ok);
+        const logEl = document.getElementById('import-log');
+        logEl.innerHTML = '';
+        addLog(`${toImport.length} rijen verwerken (${stratLabel})...`, 'info');
+
+        let added = 0, updated = 0, skipped = 0, errors = 0;
+
+        for (let i = 0; i < toImport.length; i++) {
+            const { _rij, _fouten, _ok, _duplicaat, _bestaandId, ...data } = toImport[i];
+
+            try {
+                if (_duplicaat && strategy === 'skip') {
+                    addLog(`↷ Rij ${_rij}: ${data.naam} — overgeslagen (bestaat al)`, 'info');
+                    skipped++;
+                } else if (_duplicaat && strategy === 'update' && _bestaandId) {
+                    // Haal bestaande opmerkingen op en voeg nieuwe samen (geen dubbele teksten)
+                    const bestaand = await db.collection('zorgverleners').doc(_bestaandId).get();
+                    const oudeOpmerkingen = bestaand.exists ? (bestaand.data().opmerkingen || []) : [];
+                    const nieuweOpmerkingen = data.opmerkingen.filter(
+                        o => !oudeOpmerkingen.some(oud => oud.tekst === o.tekst)
+                    );
+                    await db.collection('zorgverleners').doc(_bestaandId).update({
+                        ...data,
+                        opmerkingen: [...oudeOpmerkingen, ...nieuweOpmerkingen]
+                    });
+                    addLog(`↻ Rij ${_rij}: ${data.naam} — bijgewerkt`, 'ok');
+                    updated++;
+                } else {
+                    // Nieuw toevoegen (ook bij strategy='add' met dubbeling)
+                    await db.collection('zorgverleners').add(data);
+                    addLog(`✓ Rij ${_rij}: ${data.naam} (${data.categorie})`, 'ok');
+                    added++;
+                }
+            } catch (err) {
+                addLog(`✗ Rij ${_rij}: ${data.naam} — ${err.message}`, 'err');
+                errors++;
+            }
+
+            const pct = Math.round(((i + 1) / toImport.length) * 100);
+            document.getElementById('prog-fill').style.width = pct + '%';
+            document.getElementById('prog-label').textContent = `${i + 1} van ${toImport.length} verwerkt...`;
+            await new Promise(r => setTimeout(r, 80));
+        }
+
+        addLog('', 'info');
+        const samenvatting = [
+            added > 0   ? `${added} toegevoegd`   : '',
+            updated > 0 ? `${updated} bijgewerkt`  : '',
+            skipped > 0 ? `${skipped} overgeslagen` : '',
+            errors > 0  ? `${errors} mislukt`      : ''
+        ].filter(Boolean).join(', ');
+        addLog(`Klaar! ${samenvatting}.`, errors > 0 && added + updated === 0 ? 'err' : 'ok');
+        document.getElementById('prog-label').textContent = `Voltooid — ${samenvatting}.`;
+        document.getElementById('btn-go-app').classList.remove('hidden');
+        document.getElementById('btn-more').classList.remove('hidden');
+    }
+
+    function addLog(msg, type) {
+        const el = document.getElementById('import-log');
+        const d = document.createElement('div');
+        d.className = 'log-line log-' + type;
+        d.textContent = msg;
+        el.appendChild(d);
+        el.scrollTop = el.scrollHeight;
+    }
+
+    // Reset buttons
+    function fullReset() {
+        rawRows = []; detectedCols = []; mappedRows = [];
+        fileInput.value = '';
+        ['sec-mapping','sec-preview','sec-import'].forEach(id =>
+            document.getElementById(id).classList.add('hidden'));
+        document.getElementById('sec-upload').classList.remove('hidden');
+        document.getElementById('import-log').innerHTML = '';
+        document.getElementById('preview-tbody').innerHTML = '';
+        document.getElementById('prog-fill').style.width = '0%';
+        document.getElementById('dup-box').classList.add('hidden');
+        document.getElementById('btn-go-app').classList.add('hidden');
+        document.getElementById('btn-more').classList.add('hidden');
+        document.getElementById('btn-go-app').classList.add('hidden');
+        document.getElementById('btn-more').classList.add('hidden');
+        setStep(1);
+    }
+
+    document.getElementById('btn-reset-mapping').addEventListener('click', fullReset);
+    document.getElementById('btn-reset-preview').addEventListener('click', fullReset);
+    document.getElementById('btn-more').addEventListener('click', fullReset);
+    document.getElementById('btn-back-mapping').addEventListener('click', () => {
+        setStep(2);
+        document.getElementById('sec-preview').classList.add('hidden');
+        document.getElementById('sec-mapping').classList.remove('hidden');
+    });
+
+    function esc(str) {
+        if (!str) return '';
+        const d = document.createElement('div');
+        d.textContent = String(str);
+        return d.innerHTML;
+    }
+
+})();
+</script>
+</body>
+</html>

@@ -25,12 +25,14 @@
     // --- State ---
     let db = null;
     let allProviders = [];
+    let allDocuments = [];
     let activeCategory = null;
     let searchQuery = '';
     let currentDetailId = null;
-    let currentView = 'cards'; // 'cards', 'list', 'map'
+    let currentView = 'cards'; // 'cards', 'list', 'map', 'docs'
     let map = null;
     let mapMarkers = [];
+    let currentDocLabels = [];
 
     // --- DOM refs ---
     const $ = (sel) => document.querySelector(sel);
@@ -96,6 +98,7 @@
             }
             db = firebase.firestore();
             loadProviders();
+            loadDocuments();
         } catch (err) {
             console.error('Firebase init error:', err);
             showToast('Fout bij verbinden met database. Controleer firebase-config.js');
@@ -188,15 +191,16 @@
     }
 
     function renderCategorieSelect() {
-        const select = $('#provider-categorie');
-        // Clear existing options except first
-        while (select.options.length > 1) select.remove(1);
-
-        CATEGORIEEN.forEach(cat => {
-            const opt = document.createElement('option');
-            opt.value = cat;
-            opt.textContent = cat;
-            select.appendChild(opt);
+        [['#provider-categorie', 1], ['#document-categorie', 1]].forEach(([sel, keep]) => {
+            const select = $(sel);
+            if (!select) return;
+            while (select.options.length > keep) select.remove(keep);
+            CATEGORIEEN.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = cat;
+                select.appendChild(opt);
+            });
         });
     }
 
@@ -318,12 +322,30 @@
     function switchView(view) {
         currentView = view;
 
-        // Update button states
         $('#btn-view-cards').classList.toggle('active', view === 'cards');
         $('#btn-view-list').classList.toggle('active', view === 'list');
         $('#btn-view-map').classList.toggle('active', view === 'map');
+        $('#btn-view-docs').classList.toggle('active', view === 'docs');
 
-        renderCurrentView();
+        // Zoek- en filterbalk: verberg bij docs, toon bij rest
+        const isDocsView = view === 'docs';
+        $('#category-filters').classList.toggle('hidden', isDocsView);
+        $('#results-count').parentElement.classList.toggle('hidden', isDocsView);
+
+        // Add-knop label aanpassen
+        const btnLabel = $('#btn-add .btn-label');
+        if (btnLabel) btnLabel.textContent = isDocsView ? 'Document' : 'Toevoegen';
+
+        if (isDocsView) {
+            $('#cards-container').classList.add('hidden');
+            $('#list-container').classList.add('hidden');
+            $('#map-container').classList.add('hidden');
+            $('#empty-state').classList.add('hidden');
+            renderDocuments();
+        } else {
+            $('#docs-container').classList.add('hidden');
+            renderCurrentView();
+        }
     }
 
     function filterProviders() {
@@ -670,10 +692,12 @@
         $('#btn-view-cards').addEventListener('click', () => switchView('cards'));
         $('#btn-view-list').addEventListener('click', () => switchView('list'));
         $('#btn-view-map').addEventListener('click', () => switchView('map'));
+        $('#btn-view-docs').addEventListener('click', () => switchView('docs'));
 
-        // Add button
+        // Add button — context-aware
         $('#btn-add').addEventListener('click', () => {
-            openProviderModal();
+            if (currentView === 'docs') openDocumentModal();
+            else openProviderModal();
         });
 
         // Place search in form
@@ -895,6 +919,199 @@
         const d = new Date(dateStr);
         return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' });
     }
+
+    // =========================================================
+    // DOCUMENTEN
+    // =========================================================
+    function loadDocuments() {
+        if (!db) return;
+        db.collection('documenten')
+            .orderBy('datum', 'desc')
+            .onSnapshot((snapshot) => {
+                allDocuments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                if (currentView === 'docs') renderDocuments();
+            }, (err) => {
+                console.error('Documenten error:', err);
+            });
+    }
+
+    function renderDocuments() {
+        const container = $('#docs-container');
+        container.innerHTML = '';
+        container.classList.remove('hidden');
+
+        const q = searchQuery.toLowerCase();
+        const filtered = allDocuments.filter(doc => {
+            if (!q) return true;
+            return (doc.titel || '').toLowerCase().includes(q) ||
+                   (doc.organisatie || '').toLowerCase().includes(q) ||
+                   (doc.beschrijving || '').toLowerCase().includes(q) ||
+                   (doc.tags || []).join(' ').toLowerCase().includes(q);
+        });
+
+        if (filtered.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'docs-empty-state';
+            empty.innerHTML = `
+                <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5">
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="9" y1="13" x2="15" y2="13"/>
+                    <line x1="9" y1="17" x2="13" y2="17"/>
+                </svg>
+                <h3>${q ? 'Geen documenten gevonden' : 'Nog geen documenten'}</h3>
+                <p>${q ? 'Pas je zoekopdracht aan.' :
+                    'Voeg overzichtsdocumenten toe, zoals bereikbaarheidslijsten, protocollen of verwijswijzers van zorgorganisaties.<br><br>Klik op <strong>+ Document</strong> om te beginnen.'}</p>
+            `;
+            container.appendChild(empty);
+            return;
+        }
+
+        filtered.forEach(doc => container.appendChild(createDocCard(doc)));
+    }
+
+    const DOC_ICONS = {
+        excel: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>`,
+        pdf:   `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`,
+        word:  `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>`,
+        link:  `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>`,
+        overig:`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`
+    };
+
+    function createDocCard(doc) {
+        const card = document.createElement('div');
+        card.className = 'doc-card';
+
+        const type = doc.bestandstype || 'overig';
+        const icon = DOC_ICONS[type] || DOC_ICONS.overig;
+        const tags = (doc.tags || []).map(t =>
+            `<span class="label-tag">${escapeHtml(t)}</span>`
+        ).join('');
+
+        card.innerHTML = `
+            <div class="doc-card-top">
+                <div class="doc-icon doc-icon-${type}">${icon}</div>
+                <div class="doc-card-info">
+                    <div class="doc-titel">${escapeHtml(doc.titel)}</div>
+                    ${doc.organisatie ? `<div class="doc-organisatie">${escapeHtml(doc.organisatie)}</div>` : ''}
+                </div>
+            </div>
+            ${doc.beschrijving ? `<div class="doc-beschrijving">${escapeHtml(doc.beschrijving)}</div>` : ''}
+            ${tags ? `<div class="doc-tags">${tags}</div>` : ''}
+            <div class="doc-card-footer">
+                <span class="doc-cat-badge">${escapeHtml(doc.categorie || 'Overig')}</span>
+                <div class="doc-footer-right">
+                    ${doc.link ? `<a href="${escapeHtml(doc.link)}" target="_blank" rel="noopener" class="doc-open-btn">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                        Openen
+                    </a>` : ''}
+                    <button class="doc-action-btn" title="Bewerken" data-edit-doc="${doc.id}">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <button class="doc-action-btn danger" title="Verwijderen" data-del-doc="${doc.id}">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        card.querySelector('[data-edit-doc]')?.addEventListener('click', () => {
+            const d = allDocuments.find(x => x.id === doc.id);
+            if (d) openDocumentModal(d);
+        });
+
+        card.querySelector('[data-del-doc]')?.addEventListener('click', () => {
+            showConfirm('Weet je zeker dat je dit document wilt verwijderen?', () => {
+                deleteDocument(doc.id);
+            });
+        });
+
+        return card;
+    }
+
+    function openDocumentModal(doc = null) {
+        const isEdit = !!doc;
+        $('#modal-document-title').textContent = isEdit ? 'Document bewerken' : 'Document toevoegen';
+        $('#document-id').value = isEdit ? doc.id : '';
+        $('#document-titel').value = isEdit ? doc.titel || '' : '';
+        $('#document-organisatie').value = isEdit ? doc.organisatie || '' : '';
+        $('#document-categorie').value = isEdit ? doc.categorie || '' : '';
+        $('#document-beschrijving').value = isEdit ? doc.beschrijving || '' : '';
+        $('#document-link').value = isEdit ? doc.link || '' : '';
+        $('#document-type').value = isEdit ? doc.bestandstype || 'overig' : 'excel';
+
+        currentDocLabels = isEdit ? [...(doc.tags || [])] : [];
+        renderLabelsList($('#document-tags-list'), currentDocLabels);
+
+        openModal('modal-document');
+        $('#document-titel').focus();
+    }
+
+    async function saveDocument(data) {
+        if (!db) return;
+        try {
+            if (data.id) {
+                const { id, ...rest } = data;
+                await db.collection('documenten').doc(id).update(rest);
+                showToast('Document bijgewerkt');
+            } else {
+                await db.collection('documenten').add(data);
+                showToast('Document toegevoegd');
+            }
+        } catch (err) {
+            console.error('Document save error:', err);
+            showToast('Fout bij opslaan');
+        }
+    }
+
+    async function deleteDocument(id) {
+        if (!db) return;
+        try {
+            await db.collection('documenten').doc(id).delete();
+            showToast('Document verwijderd');
+        } catch (err) {
+            console.error('Document delete error:', err);
+            showToast('Fout bij verwijderen');
+        }
+    }
+
+    // Form submit voor documenten
+    document.addEventListener('DOMContentLoaded', () => {
+        const formDoc = document.getElementById('form-document');
+        if (!formDoc) return;
+
+        // Tags input
+        const tagsInput = document.getElementById('document-tags-input');
+        tagsInput?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const tag = tagsInput.value.trim();
+                if (tag && !currentDocLabels.includes(tag)) {
+                    currentDocLabels.push(tag);
+                    renderLabelsList(document.getElementById('document-tags-list'), currentDocLabels);
+                }
+                tagsInput.value = '';
+            }
+        });
+
+        formDoc.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const data = {
+                titel: document.getElementById('document-titel').value.trim(),
+                organisatie: document.getElementById('document-organisatie').value.trim(),
+                categorie: document.getElementById('document-categorie').value,
+                beschrijving: document.getElementById('document-beschrijving').value.trim(),
+                link: document.getElementById('document-link').value.trim(),
+                bestandstype: document.getElementById('document-type').value,
+                tags: [...currentDocLabels],
+                datum: new Date().toISOString().split('T')[0]
+            };
+            const id = document.getElementById('document-id').value;
+            if (id) data.id = id;
+            saveDocument(data);
+            closeModal('modal-document');
+        });
+    });
 
     function showToast(message) {
         // Remove existing toast

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>Import Paramedici - Sociale Kaart</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 900px; margin: 40px auto; padding: 20px; }
+        h1 { color: #2563eb; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #cce5ff; color: #004085; }
+        button { background: #2563eb; color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 10px 5px 10px 0; }
+        button:hover { background: #1d4ed8; }
+        button:disabled { background: #ccc; }
+        #log { background: #f5f5f5; padding: 15px; border-radius: 5px; max-height: 500px; overflow-y: auto; font-family: monospace; font-size: 13px; }
+        .log-item { margin: 5px 0; padding: 5px; border-bottom: 1px solid #ddd; }
+        .summary { background: #e8f4fd; padding: 15px; border-radius: 5px; margin: 15px 0; }
+        .summary h3 { margin-top: 0; }
+    </style>
+</head>
+<body>
+    <h1>📥 Import Paramedici - Sociale Kaart Purmerend</h1>
+    <p>Dit script voegt alle paramedici (fysiotherapie, logopedie, podotherapie, etc.) toe aan de database.</p>
+
+    <div class="summary">
+        <h3>Overzicht toe te voegen:</h3>
+        <ul>
+            <li><strong>Fysiotherapie:</strong> 10 praktijken</li>
+            <li><strong>Logopedie:</strong> 4 praktijken</li>
+            <li><strong>Podotherapie:</strong> 1 praktijk</li>
+            <li><strong>Ergotherapie:</strong> 3 praktijken (Mensendieck/Oefentherapie)</li>
+            <li><strong>Thuiszorg:</strong> 2 organisaties</li>
+        </ul>
+    </div>
+
+    <button id="btn-import" onclick="startImport()">🚀 Start Import Paramedici</button>
+
+    <div id="log"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script>
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const item = document.createElement('div');
+            item.className = 'log-item';
+            item.innerHTML = `<span style="color: ${type === 'success' ? 'green' : type === 'error' ? 'red' : 'blue'}">
+                ${type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ'}</span> ${message}`;
+            logDiv.appendChild(item);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        // Alle paramedici data uit de PDF's
+        const paramedici = [
+            // === FYSIOTHERAPIE ===
+            {
+                naam: "Fysiotherapie Julianastraat",
+                categorie: "Fysiotherapie",
+                adres: "Julianastraat 6, Purmerend",
+                telefoon: "0299-423462",
+                email: "",
+                website: "",
+                labels: ["fysiotherapie", "manuele therapie", "Purmerend"],
+                opmerkingen: []
+            },
+            {
+                naam: "Fysiotherapie Mellenberg/Lehmann",
+                categorie: "Fysiotherapie",
+                adres: "Schipperslaan 7, Purmerend",
+                telefoon: "0299-439343",
+                email: "",
+                website: "",
+                labels: ["fysiotherapie", "manuele therapie", "Purmerend"],
+                opmerkingen: []
+            },
+            {
+                naam: "Fysiotherapiepraktijk Bijman en Helsloot",
+                categorie: "Fysiotherapie",
+                adres: "Wilhelminalaan 1, Purmerend",
+                telefoon: "088-0449049",
+                email: "",
+                website: "",
+                labels: ["fysiotherapie", "Purmerend"],
+                opmerkingen: []
+            },
+            {
+                naam: "Fysio Consult Purmerend",
+                categorie: "Fysiotherapie",
+                adres: "Prof.mr. P.J. Oudlaan 1, Purmerend",
+                telefoon: "0299-420422",
+                email: "",
+                website: "",
+                labels: ["fysiotherapie", "Purmerend"],
+                opmerkingen: []
+            },
+            {
+                naam: "Fysiotherapie Overwhere",
+                categorie: "Fysiotherapie",
+                adres: "Gasinjetstraat 2, Purmerend",
+                telefoon: "0299-424339",
+                email: "",
+                website: "",
+                labels: ["fysiotherapie", "Purmerend"],
+                opmerkingen: []
+            },
+            {
+                naam: "Fysiotherapie Kamphuis",
+                categorie: "Fysiotherapie",
+                adres: "Zuiderweg 115E, Zuidoostbeemster",
+                telefoon: "06-49105334",
+                email: "",
+                website: "",
+                labels: ["fysiotherapie", "Zuidoostbeemster"],
+                opmerkingen: []
+            },
+            {
+                naam: "Gors Fysiotherapie",
+                categorie: "Fysiotherapie",
+                adres: "Lisdoddestraat 28-30, Purmerend",
+                telefoon: "0299-435973",
+                email: "",
+                website: "",
+                labels: ["fysiotherapie", "manuele therapie", "Purmerend"],
+                opmerkingen: [{ tekst: "Dichtbij huisartsenpraktijk De Gors", auteur: "Import", datum: "2024-01-01" }]
+            },
+            {
+                naam: "Fysiotherapie Weidevenne",
+                categorie: "Fysiotherapie",
+                adres: "Melbournestraat 2C, Purmerend",
+                telefoon: "0299-425683",
+                email: "",
+                website: "",
+                labels: ["fysiotherapie", "manuele therapie", "Weidevenne", "Purmerend"],
+                opmerkingen: []
+            },
+            {
+                naam: "Kinderfysiotherapiepraktijk Sam Sam",
+                categorie: "Fysiotherapie",
+                adres: "Zambezilaan 187, Purmerend",
+                telefoon: "0299-478078",
+                email: "",
+                website: "",
+                labels: ["kinderfysiotherapie", "kinderen", "Purmerend"],
+                opmerkingen: [{ tekst: "Gespecialiseerd in kinderen", auteur: "Import", datum: "2024-01-01" }]
+            },
+
+            // === LOGOPEDIE ===
+            {
+                naam: "Logopedie Wherestate",
+                categorie: "Logopedie",
+                adres: "Melbournestraat 2F, Purmerend",
+                telefoon: "0299-430933",
+                email: "",
+                website: "",
+                labels: ["logopedie", "Purmerend"],
+                opmerkingen: []
+            },
+            {
+                naam: "Logopedie Purmerend",
+                categorie: "Logopedie",
+                adres: "Prof. Mr. P.J. Oudlaan 1, Purmerend",
+                telefoon: "0299-438504",
+                email: "",
+                website: "",
+                labels: ["logopedie", "Purmerend"],
+                opmerkingen: []
+            },
+            {
+                naam: "Logopediepraktijk ISTO",
+                categorie: "Logopedie",
+                adres: "Waterlandlaan 81, 1441 RS Purmerend",
+                telefoon: "06-28533713",
+                email: "",
+                website: "",
+                labels: ["logopedie", "Purmerend"],
+                opmerkingen: [{ tekst: "Alternatief nummer: 06-12672654", auteur: "Import", datum: "2024-01-01" }]
+            },
+            {
+                naam: "Kinderpraktijk Sam-Sam (Logopedie)",
+                categorie: "Logopedie",
+                adres: "Zambezilaan 187, Purmerend",
+                telefoon: "0299-642201",
+                email: "",
+                website: "",
+                labels: ["logopedie", "kinderen", "Purmerend"],
+                opmerkingen: [{ tekst: "Gespecialiseerd in kinderen", auteur: "Import", datum: "2024-01-01" }]
+            },
+
+            // === PODOTHERAPIE ===
+            {
+                naam: "RondOm Podotherapeuten",
+                categorie: "Podotherapie",
+                adres: "Melbournestraat 2B, 1448 NH Purmerend",
+                telefoon: "088-1180550",
+                email: "",
+                website: "https://www.podotherapierondom.nl",
+                labels: ["podotherapie", "diabetes", "sport", "reuma", "kinderen", "echografie", "Purmerend"],
+                opmerkingen: [{ tekst: "Geen wachtlijst. Ook locatie bij Fysiotherapie Kamphuis (Geersstraat 55). Avondspreekuur beschikbaar.", auteur: "Import", datum: "2024-01-01" }]
+            },
+
+            // === ERGOTHERAPIE / MENSENDIECK / OEFENTHERAPIE ===
+            {
+                naam: "Mensendieck Purmerend - Marijke Stuiver",
+                categorie: "Ergotherapie",
+                adres: "Waterlandlaan 110, Purmerend",
+                telefoon: "0299-438884",
+                email: "",
+                website: "",
+                labels: ["mensendieck", "oefentherapie", "houding", "Purmerend"],
+                opmerkingen: []
+            },
+            {
+                naam: "Mensendieck - Marcella Sjollema",
+                categorie: "Ergotherapie",
+                adres: "Melbournestraat 2F, Purmerend",
+                telefoon: "0299-606139",
+                email: "",
+                website: "",
+                labels: ["mensendieck", "oefentherapie", "houding", "Purmerend"],
+                opmerkingen: []
+            },
+            {
+                naam: "Oase Centrum - Marieke Koopman",
+                categorie: "Ergotherapie",
+                adres: "Amstellaan 2B, Purmerend",
+                telefoon: "06-51246078",
+                email: "",
+                website: "",
+                labels: ["mensendieck", "oefentherapie", "houding", "Purmerend"],
+                opmerkingen: []
+            },
+
+            // === THUISZORG ===
+            {
+                naam: "Evean Thuiszorg",
+                categorie: "Thuiszorg",
+                adres: "Purmerend",
+                telefoon: "088-9342000",
+                email: "",
+                website: "https://www.evean.nl",
+                labels: ["thuiszorg", "wijkverpleging", "Purmerend"],
+                opmerkingen: [{ tekst: "Onderdeel van Evean. Meerdere buurtteams in Purmerend.", auteur: "Import", datum: "2024-01-01" }]
+            },
+            {
+                naam: "De Zorgcirkel Thuiszorg",
+                categorie: "Thuiszorg",
+                adres: "Purmerend",
+                telefoon: "0299-398200",
+                email: "",
+                website: "https://www.zorgcirkel.nl",
+                labels: ["thuiszorg", "wijkverpleging", "Purmerend"],
+                opmerkingen: [{ tekst: "Meerdere wijkverpleegkundigen en thuiszorgteams in Purmerend.", auteur: "Import", datum: "2024-01-01" }]
+            }
+        ];
+
+        async function startImport() {
+            const btn = document.getElementById('btn-import');
+            btn.disabled = true;
+            document.getElementById('log').innerHTML = '';
+
+            log('🚀 Start import van ' + paramedici.length + ' paramedici...');
+
+            let success = 0;
+            let errors = 0;
+
+            for (const pm of paramedici) {
+                try {
+                    await db.collection('zorgverleners').add(pm);
+                    log(`✓ ${pm.naam} (${pm.categorie}) toegevoegd`, 'success');
+                    success++;
+                } catch (err) {
+                    log(`✗ Fout bij ${pm.naam}: ${err.message}`, 'error');
+                    errors++;
+                }
+                // Kleine pauze om Firebase niet te overbelasten
+                await new Promise(r => setTimeout(r, 100));
+            }
+
+            log('');
+            log(`📊 Import voltooid: ${success} succesvol, ${errors} fouten`, success > 0 ? 'success' : 'error');
+            log('Je kunt nu terug naar index.html om de zorgverleners te bekijken!');
+
+            btn.disabled = false;
+        }
+    </script>
+</body>
+</html>
