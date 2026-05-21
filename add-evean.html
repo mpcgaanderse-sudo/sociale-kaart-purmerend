@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>Evean Toevoegen - Sociale Kaart</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 700px; margin: 40px auto; padding: 20px; }
+        h1 { color: #2563eb; }
+        .card { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 20px; margin: 20px 0; }
+        .card h2 { margin-top: 0; color: #0369a1; }
+        .field { margin: 8px 0; font-size: 14px; }
+        .label { font-weight: bold; color: #555; min-width: 120px; display: inline-block; }
+        .tag { background: #dbeafe; color: #1e40af; border-radius: 12px; padding: 2px 10px; font-size: 12px; margin: 2px; display: inline-block; }
+        button { background: #2563eb; color: white; border: none; padding: 12px 28px; border-radius: 6px; cursor: pointer; font-size: 16px; margin: 10px 5px 10px 0; }
+        button:hover { background: #1d4ed8; }
+        button:disabled { background: #ccc; }
+        .btn-danger { background: #dc2626; }
+        .btn-danger:hover { background: #b91c1c; }
+        #log { background: #f5f5f5; padding: 15px; border-radius: 5px; min-height: 60px; font-family: monospace; font-size: 13px; margin-top: 20px; }
+        .info { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 6px; padding: 12px; margin: 15px 0; color: #9a3412; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <h1>🏠 Evean Thuiszorg Toevoegen</h1>
+
+    <div class="info">
+        <strong>Eenmalig script</strong> — voegt één slimme Evean-kaart toe aan de Sociale Kaart. Controleer eerst of Evean al bestaat via de hoofdapp, voordat je dit uitvoert.
+    </div>
+
+    <div class="card">
+        <h2>Evean Thuiszorg</h2>
+        <div class="field"><span class="label">Categorie:</span> Thuiszorg</div>
+        <div class="field"><span class="label">Telefoon:</span> 0900-9897 (24/7)</div>
+        <div class="field"><span class="label">Website:</span> www.evean.nl</div>
+        <div class="field"><span class="label">Labels:</span>
+            <span class="tag">thuisverpleging</span>
+            <span class="tag">persoonlijke verzorging</span>
+            <span class="tag">dagbesteding</span>
+            <span class="tag">nachtdienst</span>
+            <span class="tag">24/7 bereikbaar</span>
+            <span class="tag">palliatieve zorg</span>
+            <span class="tag">revalidatie</span>
+        </div>
+        <div class="field"><span class="label">Opmerking:</span> Bereikbaar via 0900-9897 (24 uur, 7 dagen per week). Voor het complete teamoverzicht zie 'Bereikbaarheidslijst Evean' in de Documenten-sectie van de app.</div>
+    </div>
+
+    <button onclick="addEvean()">➕ Evean Toevoegen</button>
+    <button class="btn-danger" onclick="removeEvean()">🗑️ Evean Verwijderen</button>
+    <a href="index.html" style="margin-left:10px; color:#2563eb;">← Terug naar app</a>
+
+    <div id="log">Klik op 'Evean Toevoegen' om te starten...</div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script>
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        function log(msg) {
+            document.getElementById('log').innerHTML = msg;
+        }
+
+        const eveanData = {
+            naam: 'Evean Thuiszorg',
+            categorie: 'Thuiszorg',
+            telefoon: '0900-9897',
+            website: 'https://www.evean.nl',
+            adres: 'Purmerend',
+            labels: ['thuisverpleging', 'persoonlijke verzorging', 'dagbesteding', 'nachtdienst', '24/7 bereikbaar', 'palliatieve zorg', 'revalidatie'],
+            opmerking: 'Bereikbaar via 0900-9897 (24 uur, 7 dagen per week). Voor het complete teamoverzicht zie \'Bereikbaarheidslijst Evean\' in de Documenten-sectie van de app.',
+            aangemaakt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        async function addEvean() {
+            log('Bezig...');
+            try {
+                // Check of Evean al bestaat
+                const existing = await db.collection('zorgverleners')
+                    .where('naam', '==', 'Evean Thuiszorg')
+                    .get();
+
+                if (!existing.empty) {
+                    log('⚠️ Evean Thuiszorg bestaat al in de database (ID: ' + existing.docs[0].id + '). Geen actie ondernomen.');
+                    return;
+                }
+
+                const ref = await db.collection('zorgverleners').add(eveanData);
+                log('✅ Evean Thuiszorg toegevoegd! (ID: ' + ref.id + ')<br><br>' +
+                    '<a href="index.html" style="color:#2563eb;">→ Open de Sociale Kaart</a>');
+            } catch (err) {
+                log('❌ Fout: ' + err.message);
+            }
+        }
+
+        async function removeEvean() {
+            if (!confirm('Evean Thuiszorg verwijderen uit de database?')) return;
+            log('Bezig...');
+            try {
+                const snap = await db.collection('zorgverleners')
+                    .where('naam', '==', 'Evean Thuiszorg')
+                    .get();
+
+                if (snap.empty) {
+                    log('⚠️ Evean Thuiszorg niet gevonden.');
+                    return;
+                }
+
+                for (const doc of snap.docs) {
+                    await db.collection('zorgverleners').doc(doc.id).delete();
+                }
+                log('🗑️ Evean Thuiszorg verwijderd.');
+            } catch (err) {
+                log('❌ Fout: ' + err.message);
+            }
+        }
+    </script>
+</body>
+</html>
