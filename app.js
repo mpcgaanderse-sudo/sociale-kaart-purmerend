@@ -24,7 +24,6 @@
 
     // --- State ---
     let db = null;
-    let storage = null;
     let allProviders = [];
     let allDocuments = [];
     let activeCategory = null;
@@ -34,9 +33,6 @@
     let map = null;
     let mapMarkers = [];
     let currentDocLabels = [];
-    let currentUploadMode = 'link'; // 'link' | 'upload'
-    let currentUploadUrl = null;    // download URL na upload
-    let currentStoragePath = null;  // pad in Storage (voor verwijderen)
 
     // --- DOM refs ---
     const $ = (sel) => document.querySelector(sel);
@@ -101,7 +97,6 @@
                 firebase.initializeApp(firebaseConfig);
             }
             db = firebase.firestore();
-            storage = firebase.storage();
             loadProviders();
             loadDocuments();
         } catch (err) {
@@ -1052,105 +1047,14 @@
         $('#document-organisatie').value = isEdit ? doc.organisatie || '' : '';
         $('#document-categorie').value = isEdit ? doc.categorie || '' : '';
         $('#document-beschrijving').value = isEdit ? doc.beschrijving || '' : '';
+        $('#document-link').value = isEdit ? doc.link || '' : '';
+        $('#document-type').value = isEdit ? doc.bestandstype || 'overig' : 'excel';
 
         currentDocLabels = isEdit ? [...(doc.tags || [])] : [];
         renderLabelsList($('#document-tags-list'), currentDocLabels);
 
-        // Bepaal modus: upload als storagePath bestaat, anders link
-        const wasUploaded = isEdit && !!doc.storagePath;
-        currentStoragePath = isEdit ? (doc.storagePath || null) : null;
-        currentUploadUrl = null;
-
-        if (wasUploaded) {
-            _switchDocSource('upload');
-            // Toon bestaande bestandsnaam
-            const name = doc.bestandsnaam || doc.titel || 'bestand';
-            _showUploadDone(name);
-            currentUploadUrl = doc.link || null;
-        } else {
-            _switchDocSource('link');
-            $('#document-link').value = isEdit ? doc.link || '' : '';
-            $('#document-type').value = isEdit ? doc.bestandstype || 'overig' : 'link';
-            _resetUploadUI();
-        }
-
         openModal('modal-document');
         $('#document-titel').focus();
-    }
-
-    function _switchDocSource(mode) {
-        currentUploadMode = mode;
-        $('#doc-source-link').classList.toggle('active', mode === 'link');
-        $('#doc-source-upload').classList.toggle('active', mode === 'upload');
-        $('#doc-link-section').classList.toggle('hidden', mode === 'upload');
-        $('#doc-upload-section').classList.toggle('hidden', mode === 'link');
-    }
-
-    function _resetUploadUI() {
-        const dropzone = $('#doc-dropzone');
-        const progress = $('#doc-upload-progress');
-        const done = $('#doc-upload-done');
-        if (dropzone) dropzone.classList.remove('hidden');
-        if (progress) progress.classList.add('hidden');
-        if (done) done.classList.add('hidden');
-        const fileInput = $('#document-file');
-        if (fileInput) fileInput.value = '';
-        currentUploadUrl = null;
-    }
-
-    function _showUploadDone(filename) {
-        $('#doc-dropzone')?.classList.add('hidden');
-        $('#doc-upload-progress')?.classList.add('hidden');
-        const done = $('#doc-upload-done');
-        if (done) {
-            done.classList.remove('hidden');
-            const nameEl = $('#doc-upload-done-name');
-            if (nameEl) nameEl.textContent = filename;
-        }
-    }
-
-    function _detectFileType(filename) {
-        const ext = (filename || '').split('.').pop().toLowerCase();
-        if (['xlsx', 'xls', 'csv'].includes(ext)) return 'excel';
-        if (ext === 'pdf') return 'pdf';
-        if (['doc', 'docx'].includes(ext)) return 'word';
-        return 'overig';
-    }
-
-    function _uploadFileToStorage(file) {
-        return new Promise((resolve, reject) => {
-            if (!storage) { reject(new Error('Storage niet beschikbaar')); return; }
-            const path = `documenten/${Date.now()}_${file.name}`;
-            const ref = storage.ref(path);
-            const task = ref.put(file);
-
-            // Toon progress
-            const dropzone = $('#doc-dropzone');
-            const progressEl = $('#doc-upload-progress');
-            const fill = $('#doc-progress-fill');
-            const pct = $('#doc-upload-percent');
-            const fnEl = $('#doc-upload-filename');
-
-            if (dropzone) dropzone.classList.add('hidden');
-            if (progressEl) progressEl.classList.remove('hidden');
-            if (fnEl) fnEl.textContent = file.name;
-
-            task.on('state_changed',
-                (snap) => {
-                    const p = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
-                    if (fill) fill.style.width = p + '%';
-                    if (pct) pct.textContent = p + '%';
-                },
-                (err) => reject(err),
-                async () => {
-                    const url = await task.snapshot.ref.getDownloadURL();
-                    _showUploadDone(file.name);
-                    currentUploadUrl = url;
-                    currentStoragePath = path;
-                    resolve({ url, path, filename: file.name });
-                }
-            );
-        });
     }
 
     async function saveDocument(data) {
@@ -1173,11 +1077,6 @@
     async function deleteDocument(id) {
         if (!db) return;
         try {
-            // Verwijder ook bestand uit Storage als het daar staat
-            const doc = allDocuments.find(d => d.id === id);
-            if (doc?.storagePath && storage) {
-                try { await storage.ref(doc.storagePath).delete(); } catch (_) {}
-            }
             await db.collection('documenten').doc(id).delete();
             showToast('Document verwijderd');
         } catch (err) {
@@ -1186,44 +1085,10 @@
         }
     }
 
-    // Form submit + modal interactie voor documenten
+    // Form submit voor documenten
     document.addEventListener('DOMContentLoaded', () => {
         const formDoc = document.getElementById('form-document');
         if (!formDoc) return;
-
-        // Source toggle knoppen
-        document.getElementById('doc-source-link')?.addEventListener('click', () => _switchDocSource('link'));
-        document.getElementById('doc-source-upload')?.addEventListener('click', () => _switchDocSource('upload'));
-
-        // Dropzone klik
-        const dropzone = document.getElementById('doc-dropzone');
-        const fileInput = document.getElementById('document-file');
-        dropzone?.addEventListener('click', () => fileInput?.click());
-        document.querySelector('.upload-browse')?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            fileInput?.click();
-        });
-
-        // Drag & drop
-        dropzone?.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragging'); });
-        dropzone?.addEventListener('dragleave', () => dropzone.classList.remove('dragging'));
-        dropzone?.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropzone.classList.remove('dragging');
-            const file = e.dataTransfer.files[0];
-            if (file) handleFileSelected(file);
-        });
-
-        // Bestand gekozen via picker
-        fileInput?.addEventListener('change', () => {
-            if (fileInput.files[0]) handleFileSelected(fileInput.files[0]);
-        });
-
-        // Wijzigen-knop
-        document.getElementById('doc-change-file')?.addEventListener('click', () => {
-            _resetUploadUI();
-            currentStoragePath = null;
-        });
 
         // Tags input
         const tagsInput = document.getElementById('document-tags-input');
@@ -1239,82 +1104,24 @@
             }
         });
 
-        formDoc.addEventListener('submit', async (e) => {
+        formDoc.addEventListener('submit', (e) => {
             e.preventDefault();
-            const submitBtn = formDoc.querySelector('[type="submit"]');
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Bezig...';
-
-            try {
-                let link = '';
-                let bestandstype = 'overig';
-                let bestandsnaam = '';
-                let storagePath = currentStoragePath || null;
-
-                if (currentUploadMode === 'upload') {
-                    // Nieuw bestand geselecteerd maar nog niet geüpload?
-                    const fileInput = document.getElementById('document-file');
-                    if (fileInput?.files[0]) {
-                        const result = await _uploadFileToStorage(fileInput.files[0]);
-                        link = result.url;
-                        bestandstype = _detectFileType(fileInput.files[0].name);
-                        bestandsnaam = fileInput.files[0].name;
-                        storagePath = result.path;
-                    } else if (currentUploadUrl) {
-                        // Bestaand geüpload bestand, niet gewijzigd
-                        link = currentUploadUrl;
-                        bestandstype = _detectFileType(document.getElementById('doc-upload-done-name')?.textContent || '');
-                        bestandsnaam = document.getElementById('doc-upload-done-name')?.textContent || '';
-                    } else {
-                        showToast('Kies eerst een bestand om te uploaden');
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = 'Opslaan';
-                        return;
-                    }
-                } else {
-                    link = document.getElementById('document-link').value.trim();
-                    bestandstype = document.getElementById('document-type').value;
-                }
-
-                const data = {
-                    titel: document.getElementById('document-titel').value.trim(),
-                    organisatie: document.getElementById('document-organisatie').value.trim(),
-                    categorie: document.getElementById('document-categorie').value,
-                    beschrijving: document.getElementById('document-beschrijving').value.trim(),
-                    link,
-                    bestandstype,
-                    bestandsnaam,
-                    storagePath,
-                    tags: [...currentDocLabels],
-                    datum: new Date().toISOString().split('T')[0]
-                };
-
-                const id = document.getElementById('document-id').value;
-                if (id) data.id = id;
-
-                await saveDocument(data);
-                closeModal('modal-document');
-            } catch (err) {
-                console.error('Submit error:', err);
-                showToast('Fout: ' + err.message);
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Opslaan';
-            }
+            const data = {
+                titel: document.getElementById('document-titel').value.trim(),
+                organisatie: document.getElementById('document-organisatie').value.trim(),
+                categorie: document.getElementById('document-categorie').value,
+                beschrijving: document.getElementById('document-beschrijving').value.trim(),
+                link: document.getElementById('document-link').value.trim(),
+                bestandstype: document.getElementById('document-type').value,
+                tags: [...currentDocLabels],
+                datum: new Date().toISOString().split('T')[0]
+            };
+            const id = document.getElementById('document-id').value;
+            if (id) data.id = id;
+            saveDocument(data);
+            closeModal('modal-document');
         });
     });
-
-    function handleFileSelected(file) {
-        if (file.size > 50 * 1024 * 1024) {
-            showToast('Bestand is te groot (max 50MB)');
-            return;
-        }
-        // Direct uploaden zodra bestand gekozen wordt
-        _uploadFileToStorage(file).catch(err => {
-            showToast('Upload mislukt: ' + err.message);
-            _resetUploadUI();
-        });
-    }
 
     function showToast(message) {
         // Remove existing toast
