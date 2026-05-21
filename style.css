@@ -179,6 +179,12 @@ body {
     color: var(--color-text);
 }
 
+.btn-ghost.active {
+    background: var(--color-bg);
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
 .btn-danger {
     background: var(--color-danger);
     color: white;

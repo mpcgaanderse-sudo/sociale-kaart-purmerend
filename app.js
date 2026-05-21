@@ -322,9 +322,12 @@
     function switchView(view) {
         currentView = view;
 
+        // Weergave-knoppen (kaartjes/lijst/kaart)
         $('#btn-view-cards').classList.toggle('active', view === 'cards');
         $('#btn-view-list').classList.toggle('active', view === 'list');
         $('#btn-view-map').classList.toggle('active', view === 'map');
+
+        // Documenten-knop in de header
         $('#btn-view-docs').classList.toggle('active', view === 'docs');
 
         // Zoek- en filterbalk: verberg bij docs, toon bij rest
@@ -332,9 +335,16 @@
         $('#category-filters').classList.toggle('hidden', isDocsView);
         $('#results-count').parentElement.classList.toggle('hidden', isDocsView);
 
-        // Add-knop label aanpassen
+        // Add-knop: label + zichtbaarheid
+        const btnAdd = $('#btn-add');
         const btnLabel = $('#btn-add .btn-label');
-        if (btnLabel) btnLabel.textContent = isDocsView ? 'Document' : 'Toevoegen';
+        if (isDocsView) {
+            if (btnLabel) btnLabel.textContent = 'Document';
+            btnAdd.title = 'Document toevoegen';
+        } else {
+            if (btnLabel) btnLabel.textContent = 'Toevoegen';
+            btnAdd.title = 'Zorgverlener toevoegen';
+        }
 
         if (isDocsView) {
             $('#cards-container').classList.add('hidden');
