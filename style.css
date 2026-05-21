@@ -1124,6 +1124,129 @@ hr {
     line-height: 1.6;
 }
 
+/* === Bron toggle (link / upload) === */
+.source-toggle {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+}
+
+.source-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 1rem;
+    border: 2px solid var(--color-border);
+    border-radius: 6px;
+    background: white;
+    color: var(--color-text-secondary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.source-btn:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.source-btn.active {
+    border-color: var(--color-primary);
+    background: #eff6ff;
+    color: var(--color-primary);
+}
+
+/* === Upload dropzone === */
+.upload-dropzone {
+    border: 2px dashed var(--color-border);
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--color-text-secondary);
+}
+
+.upload-dropzone:hover,
+.upload-dropzone.dragging {
+    border-color: var(--color-primary);
+    background: #eff6ff;
+}
+
+.upload-dropzone p {
+    margin: 0.5rem 0 0;
+    font-size: 0.9rem;
+}
+
+.upload-browse {
+    color: var(--color-primary);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.upload-hint {
+    font-size: 0.8rem !important;
+    color: #94a3b8 !important;
+    margin-top: 0.25rem !important;
+}
+
+.upload-progress {
+    margin-top: 0.75rem;
+}
+
+.upload-filename {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-text);
+    margin-bottom: 0.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.progress-bar {
+    height: 6px;
+    background: var(--color-border);
+    border-radius: 99px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--color-primary);
+    border-radius: 99px;
+    width: 0%;
+    transition: width 0.2s;
+}
+
+.upload-percent {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    margin-top: 0.25rem;
+    text-align: right;
+}
+
+.upload-done {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding: 0.6rem 0.75rem;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    color: var(--color-text);
+}
+
+.upload-done span {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 /* === Utilities === */
 .hidden {
     display: none !important;

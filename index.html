@@ -257,21 +257,61 @@
                     <label for="document-beschrijving">Beschrijving</label>
                     <textarea id="document-beschrijving" rows="3" placeholder="Waar gaat dit document over? Wanneer is het handig?"></textarea>
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="document-link">Link naar bestand *</label>
-                        <input type="url" id="document-link" required placeholder="https://drive.google.com/...">
-                        <small>Google Drive, SharePoint, Dropbox of andere URL</small>
+                <!-- Bron toggle -->
+                <div class="form-group">
+                    <label>Bron *</label>
+                    <div class="source-toggle">
+                        <button type="button" id="doc-source-link" class="source-btn active">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+                            Via link
+                        </button>
+                        <button type="button" id="doc-source-upload" class="source-btn">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            Bestand uploaden
+                        </button>
                     </div>
+                </div>
+
+                <!-- Via link -->
+                <div id="doc-link-section">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="document-link">URL</label>
+                            <input type="url" id="document-link" placeholder="https://drive.google.com/...">
+                            <small>Google Drive, SharePoint, Dropbox of andere URL</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="document-type">Bestandstype</label>
+                            <select id="document-type">
+                                <option value="excel">Excel</option>
+                                <option value="pdf">PDF</option>
+                                <option value="word">Word</option>
+                                <option value="link">Weblink</option>
+                                <option value="overig">Overig</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Via upload -->
+                <div id="doc-upload-section" class="hidden">
                     <div class="form-group">
-                        <label for="document-type">Bestandstype</label>
-                        <select id="document-type">
-                            <option value="excel">Excel</option>
-                            <option value="pdf">PDF</option>
-                            <option value="word">Word</option>
-                            <option value="link">Weblink</option>
-                            <option value="overig">Overig</option>
-                        </select>
+                        <div id="doc-dropzone" class="upload-dropzone">
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            <p>Sleep een bestand hierheen of <span class="upload-browse">klik om te kiezen</span></p>
+                            <p class="upload-hint">Max 50MB &middot; Excel, PDF, Word, CSV</p>
+                            <input type="file" id="document-file" accept=".xlsx,.xls,.pdf,.doc,.docx,.csv,.txt" style="display:none">
+                        </div>
+                        <div id="doc-upload-progress" class="upload-progress hidden">
+                            <div class="upload-filename" id="doc-upload-filename"></div>
+                            <div class="progress-bar"><div class="progress-fill" id="doc-progress-fill"></div></div>
+                            <div class="upload-percent" id="doc-upload-percent">0%</div>
+                        </div>
+                        <div id="doc-upload-done" class="upload-done hidden">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span id="doc-upload-done-name"></span>
+                            <button type="button" id="doc-change-file" class="btn btn-ghost btn-small">Wijzigen</button>
+                        </div>
                     </div>
                 </div>
                 <div class="form-group">
@@ -309,6 +349,7 @@
     <!-- Firebase SDK (compat versie voor eenvoud) -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
     <!-- Leaflet JS voor de kaart -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
