@@ -410,7 +410,7 @@
         } else {
             renderSubcategoryFilters();
         }
-        $('#results-count').parentElement.classList.toggle('hidden', isDocsView);
+        $('#results-count').classList.toggle('hidden', isDocsView);
 
         // Add-knop: label + zichtbaarheid
         const btnAdd = $('#btn-add');
