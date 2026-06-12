@@ -116,6 +116,11 @@
                     ...doc.data()
                 }));
                 renderCurrentView();
+                // Als detail-modal open is, herrender de notities met verse data
+                if (currentDetailId) {
+                    const open = allProviders.find(p => p.id === currentDetailId);
+                    if (open) renderComments(open);
+                }
             }, (err) => {
                 console.error('Firestore error:', err);
                 showToast('Fout bij laden van zorgverleners');
@@ -475,37 +480,31 @@
         }
 
         list.innerHTML = '';
-        // Sorteer op datum, nieuwste eerst
-        const sorted = [...opmerkingen].sort((a, b) => new Date(b.datum) - new Date(a.datum));
 
-        sorted.forEach((opmerking, index) => {
+        // Maak een gesorteerde kopie met originele indices
+        const gesorteerd = opmerkingen
+            .map((o, i) => ({ ...o, _origIndex: i }))
+            .sort((a, b) => new Date(b.datum) - new Date(a.datum));
+
+        gesorteerd.forEach((opmerking) => {
             const div = document.createElement('div');
             div.className = 'comment';
             div.innerHTML = `
                 <div class="comment-text">${escapeHtml(opmerking.tekst)}</div>
                 <div class="comment-meta">
                     <span>${escapeHtml(opmerking.auteur || 'Anoniem')} · ${formatDate(opmerking.datum)}</span>
-                    <button class="comment-delete" data-index="${index}" title="Verwijderen">✕</button>
+                    <button class="comment-delete" data-index="${opmerking._origIndex}" title="Verwijderen">✕</button>
                 </div>
             `;
             list.appendChild(div);
         });
 
-        // Delete buttons
         list.querySelectorAll('.comment-delete').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const origIndex = findOriginalCommentIndex(opmerkingen, sorted, parseInt(btn.dataset.index));
-                deleteComment(origIndex);
+                deleteComment(parseInt(btn.dataset.index));
             });
         });
-    }
-
-    function findOriginalCommentIndex(original, sorted, sortedIndex) {
-        const target = sorted[sortedIndex];
-        return original.findIndex(o =>
-            o.tekst === target.tekst && o.datum === target.datum && o.auteur === target.auteur
-        );
     }
 
     // =========================================================
@@ -640,35 +639,44 @@
         const provider = allProviders.find(p => p.id === providerId);
         if (!provider) return;
 
-        const opmerkingen = provider.opmerkingen || [];
-        opmerkingen.push({
-            tekst: tekst,
+        if (!provider.opmerkingen) provider.opmerkingen = [];
+        const nieuw = {
+            tekst,
             auteur: auteur || 'Anoniem',
             datum: new Date().toISOString().split('T')[0]
-        });
+        };
+        provider.opmerkingen.push(nieuw);
+
+        // Meteen tonen in de modal
+        renderComments(provider);
 
         try {
-            await db.collection('zorgverleners').doc(providerId).update({ opmerkingen });
+            await db.collection('zorgverleners').doc(providerId).update({ opmerkingen: provider.opmerkingen });
         } catch (err) {
             console.error('Comment error:', err);
             showToast('Fout bij plaatsen opmerking');
+            provider.opmerkingen.pop(); // terugdraaien bij fout
+            renderComments(provider);
         }
     }
 
     async function deleteComment(commentIndex) {
-        if (!db || currentDetailId === null) return;
+        if (!db || !currentDetailId) return;
 
         const provider = allProviders.find(p => p.id === currentDetailId);
-        if (!provider) return;
+        if (!provider || !provider.opmerkingen) return;
 
-        const opmerkingen = [...(provider.opmerkingen || [])];
-        opmerkingen.splice(commentIndex, 1);
+        // Verwijder uit de lokale array en toon meteen
+        const verwijderd = provider.opmerkingen.splice(commentIndex, 1);
+        renderComments(provider);
 
         try {
-            await db.collection('zorgverleners').doc(currentDetailId).update({ opmerkingen });
+            await db.collection('zorgverleners').doc(currentDetailId).update({ opmerkingen: provider.opmerkingen });
         } catch (err) {
             console.error('Delete comment error:', err);
             showToast('Fout bij verwijderen opmerking');
+            provider.opmerkingen.splice(commentIndex, 0, ...verwijderd); // terugdraaien bij fout
+            renderComments(provider);
         }
     }
 
