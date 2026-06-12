@@ -405,17 +405,6 @@ body {
     min-width: 0;
 }
 
-/* Regenboogkleuren per hoofdcategorie, toegepast op alle categorie-badges */
-.cat-color-0 { color: #b91c1c; background: #fee2e2; }
-.cat-color-1 { color: #c2410c; background: #ffedd5; }
-.cat-color-2 { color: #a16207; background: #fef9c3; }
-.cat-color-3 { color: #15803d; background: #dcfce7; }
-.cat-color-4 { color: #0f766e; background: #ccfbf1; }
-.cat-color-5 { color: #1d4ed8; background: #dbeafe; }
-.cat-color-6 { color: #4338ca; background: #e0e7ff; }
-.cat-color-7 { color: #7e22ce; background: #f3e8ff; }
-.cat-color-8 { color: #be185d; background: #fce7f3; }
-
 .card-categorie {
     font-size: 0.7rem;
     font-weight: 600;
@@ -1270,3 +1259,49 @@ hr {
         padding: 0.2rem 0.5rem;
     }
 }
+
+/* Regenboogkleuren per hoofdcategorie, toegepast op alle categorie-badges */
+.card-categorie.cat-color-0,
+.list-item-categorie.cat-color-0,
+.map-popup-categorie.cat-color-0,
+.detail-categorie.cat-color-0 { color: #b91c1c; background: #fee2e2; }
+
+.card-categorie.cat-color-1,
+.list-item-categorie.cat-color-1,
+.map-popup-categorie.cat-color-1,
+.detail-categorie.cat-color-1 { color: #c2410c; background: #ffedd5; }
+
+.card-categorie.cat-color-2,
+.list-item-categorie.cat-color-2,
+.map-popup-categorie.cat-color-2,
+.detail-categorie.cat-color-2 { color: #a16207; background: #fef9c3; }
+
+.card-categorie.cat-color-3,
+.list-item-categorie.cat-color-3,
+.map-popup-categorie.cat-color-3,
+.detail-categorie.cat-color-3 { color: #15803d; background: #dcfce7; }
+
+.card-categorie.cat-color-4,
+.list-item-categorie.cat-color-4,
+.map-popup-categorie.cat-color-4,
+.detail-categorie.cat-color-4 { color: #0f766e; background: #ccfbf1; }
+
+.card-categorie.cat-color-5,
+.list-item-categorie.cat-color-5,
+.map-popup-categorie.cat-color-5,
+.detail-categorie.cat-color-5 { color: #1d4ed8; background: #dbeafe; }
+
+.card-categorie.cat-color-6,
+.list-item-categorie.cat-color-6,
+.map-popup-categorie.cat-color-6,
+.detail-categorie.cat-color-6 { color: #4338ca; background: #e0e7ff; }
+
+.card-categorie.cat-color-7,
+.list-item-categorie.cat-color-7,
+.map-popup-categorie.cat-color-7,
+.detail-categorie.cat-color-7 { color: #7e22ce; background: #f3e8ff; }
+
+.card-categorie.cat-color-8,
+.list-item-categorie.cat-color-8,
+.map-popup-categorie.cat-color-8,
+.detail-categorie.cat-color-8 { color: #be185d; background: #fce7f3; }
