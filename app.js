@@ -149,7 +149,7 @@
 
         Object.keys(CATEGORIEEN).forEach(cat => {
             const chip = document.createElement('button');
-            chip.className = 'category-chip';
+            chip.className = 'category-chip ' + getCategoryColorClass(cat);
             chip.textContent = cat;
             chip.dataset.category = cat;
             chip.addEventListener('click', () => {
