@@ -474,6 +474,7 @@
         let contactHtml = '';
         if (provider.adres) contactHtml += `<span>📍 ${escapeHtml(provider.adres)}</span>`;
         if (provider.telefoon) contactHtml += `<span>📞 ${escapeHtml(provider.telefoon)}</span>`;
+        if (provider.email) contactHtml += `<span>✉️ ${escapeHtml(provider.email)}</span>`;
 
         let labelsHtml = '';
         if (provider.labels && provider.labels.length > 0) {
