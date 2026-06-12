@@ -484,8 +484,8 @@
 
         card.innerHTML = `
             <div class="card-header">
-                <span class="card-naam">${escapeHtml(provider.naam)}</span>
                 <span class="card-categorie ${getCategoryColorClass(provider.categorie)}">${escapeHtml(provider.categorie)}${provider.subcategorie ? ' · ' + escapeHtml(provider.subcategorie) : ''}</span>
+                <span class="card-naam">${escapeHtml(provider.naam)}</span>
             </div>
             ${contactHtml ? `<div class="card-contact">${contactHtml}</div>` : ''}
             ${labelsHtml}
