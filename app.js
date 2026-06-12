@@ -18,6 +18,12 @@
         'Overig': []
     };
 
+    // Geeft een CSS-klasse terug die de categorie een eigen kleur uit het regenboogpalet geeft
+    function getCategoryColorClass(categorie) {
+        const index = Object.keys(CATEGORIEEN).indexOf(categorie);
+        return 'cat-color-' + (index >= 0 ? index : 0);
+    }
+
     // --- State ---
     let db = null;
     let allProviders = [];
@@ -310,7 +316,7 @@
                 <div class="list-item-naam">${escapeHtml(provider.naam)}</div>
                 <div class="list-item-info">${infoHtml}</div>
             </div>
-            <span class="list-item-categorie">${escapeHtml(provider.categorie)}${provider.subcategorie ? ' · ' + escapeHtml(provider.subcategorie) : ''}</span>
+            <span class="list-item-categorie ${getCategoryColorClass(provider.categorie)}">${escapeHtml(provider.categorie)}${provider.subcategorie ? ' · ' + escapeHtml(provider.subcategorie) : ''}</span>
             <div class="list-item-comments">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
                 ${commentCount}
@@ -367,7 +373,7 @@
                 const popupContent = `
                     <div class="map-popup">
                         <h4>${escapeHtml(provider.naam)}</h4>
-                        <span class="map-popup-categorie">${escapeHtml(provider.categorie)}${provider.subcategorie ? ' · ' + escapeHtml(provider.subcategorie) : ''}</span>
+                        <span class="map-popup-categorie ${getCategoryColorClass(provider.categorie)}">${escapeHtml(provider.categorie)}${provider.subcategorie ? ' · ' + escapeHtml(provider.subcategorie) : ''}</span>
                         <p>📍 ${escapeHtml(provider.adres)}</p>
                         ${provider.telefoon ? `<p>📞 ${escapeHtml(provider.telefoon)}</p>` : ''}
                         <button class="map-popup-btn" onclick="window._openDetail('${provider.id}')">Details bekijken</button>
@@ -479,7 +485,7 @@
         card.innerHTML = `
             <div class="card-header">
                 <span class="card-naam">${escapeHtml(provider.naam)}</span>
-                <span class="card-categorie">${escapeHtml(provider.categorie)}${provider.subcategorie ? ' · ' + escapeHtml(provider.subcategorie) : ''}</span>
+                <span class="card-categorie ${getCategoryColorClass(provider.categorie)}">${escapeHtml(provider.categorie)}${provider.subcategorie ? ' · ' + escapeHtml(provider.subcategorie) : ''}</span>
             </div>
             ${contactHtml ? `<div class="card-contact">${contactHtml}</div>` : ''}
             ${labelsHtml}
@@ -503,6 +509,7 @@
 
         $('#detail-naam').textContent = provider.naam;
         $('#detail-categorie').textContent = provider.categorie + (provider.subcategorie ? ' · ' + provider.subcategorie : '');
+        $('#detail-categorie').className = 'detail-categorie ' + getCategoryColorClass(provider.categorie);
 
         // Contact info
         let contactHtml = '';
