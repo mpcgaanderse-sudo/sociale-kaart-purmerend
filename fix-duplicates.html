@@ -27,6 +27,7 @@
 
     <button id="btn-fix" onclick="fixDatabase()">🔧 Start Fix</button>
     <button id="btn-rename" onclick="renameMaatschappelijk()" style="background:#16a34a;">🏷️ Hernoem "Maatschappelijk werk" → "Sociaal domein"</button>
+    <button id="btn-subcat" onclick="migrateSubcategorieen()" style="background:#9333ea;">🗂️ Migreer naar nieuwe categorieën + subcategorieën</button>
 
     <div id="log"></div>
 
@@ -115,6 +116,82 @@
                 log(`🏷️ ${categoriesFixed} categorieën aangepast`);
                 log('');
                 log('✅ Klaar! Ga terug naar index.html en ververs de pagina.', 'success');
+
+            } catch (err) {
+                log(`Fout: ${err.message}`, 'error');
+            }
+
+            btn.disabled = false;
+        }
+
+        // Mapping van oude categorie-namen naar de nieuwe categorie + subcategorie structuur
+        const SUBCATEGORIE_MAPPING = {
+            'GGZ': { categorie: 'GGZ', subcategorie: '' },
+            'Jeugdzorg': { categorie: 'Jeugdzorg', subcategorie: '' },
+            'Jeugd GGZ': { categorie: 'Jeugdzorg', subcategorie: 'Jeugdzorg en jeugdhulp' },
+            'Gehandicaptenzorg': { categorie: 'Gehandicaptenzorg', subcategorie: '' },
+            'Verslavingszorg': { categorie: 'GGZ', subcategorie: 'Verslavingszorg' },
+            'Sociaal domein': { categorie: 'Sociaal domein', subcategorie: 'Maatschappelijk werk' },
+            'Maatschappelijk werk': { categorie: 'Sociaal domein', subcategorie: 'Maatschappelijk werk' },
+            'Verpleging, verzorging en thuiszorg (VVT)': { categorie: 'Verpleging, verzorging en thuiszorg (VVT)', subcategorie: '' },
+            'Thuiszorg': { categorie: 'Verpleging, verzorging en thuiszorg (VVT)', subcategorie: 'Thuiszorg' },
+            'Paramedische zorg': { categorie: 'Paramedische zorg', subcategorie: '' },
+            'Fysiotherapie': { categorie: 'Paramedische zorg', subcategorie: 'Fysiotherapie' },
+            'Diëtetiek': { categorie: 'Paramedische zorg', subcategorie: 'Diëtetiek' },
+            'Diëtiek': { categorie: 'Paramedische zorg', subcategorie: 'Diëtetiek' },
+            'Logopedie': { categorie: 'Paramedische zorg', subcategorie: 'Logopedie' },
+            'Podotherapie': { categorie: 'Paramedische zorg', subcategorie: 'Podotherapie en voetzorg' },
+            'Podotherapie en voetzorg': { categorie: 'Paramedische zorg', subcategorie: 'Podotherapie en voetzorg' },
+            'Ergotherapie': { categorie: 'Paramedische zorg', subcategorie: 'Ergotherapie' },
+            'Apotheek': { categorie: 'Apotheek', subcategorie: '' },
+            'Verloskundige': { categorie: 'Verloskundige', subcategorie: '' },
+            'Overig': { categorie: 'Overig', subcategorie: '' }
+        };
+
+        async function migrateSubcategorieen() {
+            const btn = document.getElementById('btn-subcat');
+            btn.disabled = true;
+            document.getElementById('log').innerHTML = '';
+
+            log('📥 Ophalen van alle zorgverleners...');
+
+            try {
+                const snapshot = await db.collection('zorgverleners').get();
+                const allDocs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                log(`Gevonden: ${allDocs.length} zorgverleners`);
+                log('');
+
+                let updated = 0;
+                let skipped = 0;
+                let unknown = 0;
+
+                for (const data of allDocs) {
+                    const oldCat = data.categorie || '';
+                    const mapping = SUBCATEGORIE_MAPPING[oldCat];
+
+                    if (!mapping) {
+                        log(`⚠ Onbekende categorie "${oldCat}" bij "${data.naam}" — niet aangepast`, 'warning');
+                        unknown++;
+                        continue;
+                    }
+
+                    if (data.categorie === mapping.categorie && (data.subcategorie || '') === mapping.subcategorie) {
+                        skipped++;
+                        continue;
+                    }
+
+                    await db.collection('zorgverleners').doc(data.id).update({
+                        categorie: mapping.categorie,
+                        subcategorie: mapping.subcategorie
+                    });
+                    log(`✓ "${data.naam}": "${oldCat}" → "${mapping.categorie}"${mapping.subcategorie ? ' / "' + mapping.subcategorie + '"' : ''}`, 'success');
+                    updated++;
+                }
+
+                log('');
+                log(`✅ ${updated} bijgewerkt, ${skipped} al correct, ${unknown} onbekend.`, 'success');
+                log('Ga terug naar index.html en ververs de pagina.', 'success');
 
             } catch (err) {
                 log(`Fout: ${err.message}`, 'error');

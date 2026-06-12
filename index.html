@@ -73,6 +73,9 @@
             <div id="category-filters" class="category-filters">
                 <!-- Categorieën worden dynamisch geladen -->
             </div>
+            <div id="subcategory-filters" class="subcategory-filters hidden">
+                <!-- Subcategorieën worden dynamisch geladen -->
+            </div>
         </div>
 
         <!-- Resultaten teller en weergave opties -->
@@ -151,6 +154,12 @@
                     <label for="provider-categorie">Categorie *</label>
                     <select id="provider-categorie" required>
                         <option value="">Kies een categorie...</option>
+                    </select>
+                </div>
+                <div class="form-group hidden" id="provider-subcategorie-group">
+                    <label for="provider-subcategorie">Subcategorie</label>
+                    <select id="provider-subcategorie">
+                        <option value="">Geen subcategorie</option>
                     </select>
                 </div>
                 <div class="form-group">

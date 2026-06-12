@@ -6,27 +6,24 @@
     'use strict';
 
     // --- Categorieën ---
-    const CATEGORIEEN = [
-        'GGZ',
-        'Jeugd GGZ',
-        'Verslavingszorg',
-        'Sociaal domein',
-        'Fysiotherapie',
-        'Diëtetiek',
-        'Logopedie',
-        'Podotherapie',
-        'Thuiszorg',
-        'Apotheek',
-        'Verloskundige',
-        'Tandarts',
-        'Overig'
-    ];
+    const CATEGORIEEN = {
+        'GGZ': ['BGGZ', 'SGGZ', 'ADHD', 'Verslavingszorg', 'Eetstoornissen', 'Relatie- en systeemtherapie', 'Seksuologie', 'ALK', 'Psychotrauma', 'Psychiatrie en crisisopvang', 'Overig'],
+        'Jeugdzorg': ['Jeugdzorg en jeugdhulp', 'Consultatiebureaus en jeugdgezondheidszorg', 'Jongerenwerk', 'Opvoedondersteuning'],
+        'Gehandicaptenzorg': [],
+        'Verpleging, verzorging en thuiszorg (VVT)': ['Thuiszorg', 'Wonen met zorg', 'ELV en respijtverblijf', 'Huishoudelijke hulp'],
+        'Sociaal domein': ['Sociale wijkteams', 'Welzijn en ontmoeting', 'Maatschappelijk werk', 'Mantelzorg en informele zorg', 'Geld, werk en recht', 'Jeugd en gezin', 'Wonen en toegankelijkheid'],
+        'Paramedische zorg': ['Fysiotherapie', 'Diëtetiek', 'Logopedie', 'Podotherapie en voetzorg', 'Ergotherapie'],
+        'Apotheek': [],
+        'Verloskundige': [],
+        'Overig': []
+    };
 
     // --- State ---
     let db = null;
     let allProviders = [];
     let allDocuments = [];
     let activeCategory = null;
+    let activeSubcategory = null;
     let searchQuery = '';
     let currentDetailId = null;
     let currentView = 'cards'; // 'cards', 'list', 'map', 'docs'
@@ -137,19 +134,27 @@
         allChip.textContent = 'Alles';
         allChip.addEventListener('click', () => {
             activeCategory = null;
+            activeSubcategory = null;
             updateCategoryChips();
+            renderSubcategoryFilters();
             renderCurrentView();
         });
         container.appendChild(allChip);
 
-        CATEGORIEEN.forEach(cat => {
+        Object.keys(CATEGORIEEN).forEach(cat => {
             const chip = document.createElement('button');
             chip.className = 'category-chip';
             chip.textContent = cat;
             chip.dataset.category = cat;
             chip.addEventListener('click', () => {
-                activeCategory = activeCategory === cat ? null : cat;
+                if (activeCategory === cat) {
+                    activeCategory = null;
+                } else {
+                    activeCategory = cat;
+                }
+                activeSubcategory = null;
                 updateCategoryChips();
+                renderSubcategoryFilters();
                 renderCurrentView();
             });
             container.appendChild(chip);
@@ -164,6 +169,38 @@
             } else {
                 chip.classList.toggle('active', chip.dataset.category === activeCategory);
             }
+        });
+    }
+
+    function renderSubcategoryFilters() {
+        const container = $('#subcategory-filters');
+        container.innerHTML = '';
+
+        const subs = activeCategory ? (CATEGORIEEN[activeCategory] || []) : [];
+        if (subs.length === 0) {
+            container.classList.add('hidden');
+            return;
+        }
+        container.classList.remove('hidden');
+
+        subs.forEach(sub => {
+            const chip = document.createElement('button');
+            chip.className = 'subcategory-chip';
+            chip.textContent = sub;
+            chip.dataset.subcategory = sub;
+            chip.classList.toggle('active', activeSubcategory === sub);
+            chip.addEventListener('click', () => {
+                activeSubcategory = activeSubcategory === sub ? null : sub;
+                updateSubcategoryChips();
+                renderCurrentView();
+            });
+            container.appendChild(chip);
+        });
+    }
+
+    function updateSubcategoryChips() {
+        $$('.subcategory-chip').forEach(chip => {
+            chip.classList.toggle('active', chip.dataset.subcategory === activeSubcategory);
         });
     }
 
@@ -200,13 +237,37 @@
             const select = $(sel);
             if (!select) return;
             while (select.options.length > keep) select.remove(keep);
-            CATEGORIEEN.forEach(cat => {
+            Object.keys(CATEGORIEEN).forEach(cat => {
                 const opt = document.createElement('option');
                 opt.value = cat;
                 opt.textContent = cat;
                 select.appendChild(opt);
             });
         });
+    }
+
+    function updateProviderSubcategorieOptions(selectedValue) {
+        const group = $('#provider-subcategorie-group');
+        const select = $('#provider-subcategorie');
+        const cat = $('#provider-categorie').value;
+        const subs = CATEGORIEEN[cat] || [];
+
+        while (select.options.length > 1) select.remove(1);
+
+        if (subs.length === 0) {
+            group.classList.add('hidden');
+            select.value = '';
+            return;
+        }
+
+        group.classList.remove('hidden');
+        subs.forEach(sub => {
+            const opt = document.createElement('option');
+            opt.value = sub;
+            opt.textContent = sub;
+            select.appendChild(opt);
+        });
+        select.value = selectedValue && subs.includes(selectedValue) ? selectedValue : '';
     }
 
     function renderCards() {
@@ -249,7 +310,7 @@
                 <div class="list-item-naam">${escapeHtml(provider.naam)}</div>
                 <div class="list-item-info">${infoHtml}</div>
             </div>
-            <span class="list-item-categorie">${escapeHtml(provider.categorie)}</span>
+            <span class="list-item-categorie">${escapeHtml(provider.categorie)}${provider.subcategorie ? ' · ' + escapeHtml(provider.subcategorie) : ''}</span>
             <div class="list-item-comments">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
                 ${commentCount}
@@ -306,7 +367,7 @@
                 const popupContent = `
                     <div class="map-popup">
                         <h4>${escapeHtml(provider.naam)}</h4>
-                        <span class="map-popup-categorie">${escapeHtml(provider.categorie)}</span>
+                        <span class="map-popup-categorie">${escapeHtml(provider.categorie)}${provider.subcategorie ? ' · ' + escapeHtml(provider.subcategorie) : ''}</span>
                         <p>📍 ${escapeHtml(provider.adres)}</p>
                         ${provider.telefoon ? `<p>📞 ${escapeHtml(provider.telefoon)}</p>` : ''}
                         <button class="map-popup-btn" onclick="window._openDetail('${provider.id}')">Details bekijken</button>
@@ -338,6 +399,11 @@
         // Zoek- en filterbalk: verberg bij docs, toon bij rest
         const isDocsView = view === 'docs';
         $('#category-filters').classList.toggle('hidden', isDocsView);
+        if (isDocsView) {
+            $('#subcategory-filters').classList.add('hidden');
+        } else {
+            renderSubcategoryFilters();
+        }
         $('#results-count').parentElement.classList.toggle('hidden', isDocsView);
 
         // Add-knop: label + zichtbaarheid
@@ -370,16 +436,21 @@
             results = results.filter(p => p.categorie === activeCategory);
         }
 
+        if (activeSubcategory) {
+            results = results.filter(p => p.subcategorie === activeSubcategory);
+        }
+
         if (searchQuery) {
             const q = searchQuery.toLowerCase();
             results = results.filter(p => {
                 const naam = (p.naam || '').toLowerCase();
                 const cat = (p.categorie || '').toLowerCase();
+                const subcat = (p.subcategorie || '').toLowerCase();
                 const adres = (p.adres || '').toLowerCase();
                 const labels = (p.labels || []).join(' ').toLowerCase();
                 const opmerkingen = (p.opmerkingen || []).map(o => o.tekst).join(' ').toLowerCase();
 
-                return naam.includes(q) || cat.includes(q) || adres.includes(q) ||
+                return naam.includes(q) || cat.includes(q) || subcat.includes(q) || adres.includes(q) ||
                     labels.includes(q) || opmerkingen.includes(q);
             });
         }
@@ -408,7 +479,7 @@
         card.innerHTML = `
             <div class="card-header">
                 <span class="card-naam">${escapeHtml(provider.naam)}</span>
-                <span class="card-categorie">${escapeHtml(provider.categorie)}</span>
+                <span class="card-categorie">${escapeHtml(provider.categorie)}${provider.subcategorie ? ' · ' + escapeHtml(provider.subcategorie) : ''}</span>
             </div>
             ${contactHtml ? `<div class="card-contact">${contactHtml}</div>` : ''}
             ${labelsHtml}
@@ -431,7 +502,7 @@
         currentDetailId = id;
 
         $('#detail-naam').textContent = provider.naam;
-        $('#detail-categorie').textContent = provider.categorie;
+        $('#detail-categorie').textContent = provider.categorie + (provider.subcategorie ? ' · ' + provider.subcategorie : '');
 
         // Contact info
         let contactHtml = '';
@@ -747,12 +818,18 @@
             $('#password-input').focus();
         });
 
+        // Categorie change -> update subcategorie options
+        $('#provider-categorie').addEventListener('change', () => {
+            updateProviderSubcategorieOptions('');
+        });
+
         // Provider form
         $('#form-provider').addEventListener('submit', (e) => {
             e.preventDefault();
             const data = {
                 naam: $('#provider-naam').value.trim(),
                 categorie: $('#provider-categorie').value,
+                subcategorie: $('#provider-subcategorie').value,
                 adres: $('#provider-adres').value.trim(),
                 telefoon: $('#provider-telefoon').value.trim(),
                 email: $('#provider-email').value.trim(),
@@ -863,6 +940,7 @@
         $('#provider-id').value = isEdit ? provider.id : '';
         $('#provider-naam').value = isEdit ? provider.naam : '';
         $('#provider-categorie').value = isEdit ? provider.categorie : '';
+        updateProviderSubcategorieOptions(isEdit ? provider.subcategorie : '');
         $('#provider-adres').value = isEdit ? provider.adres || '' : '';
         $('#provider-telefoon').value = isEdit ? provider.telefoon || '' : '';
         $('#provider-email').value = isEdit ? provider.email || '' : '';
