@@ -26,6 +26,7 @@
     </div>
 
     <button id="btn-fix" onclick="fixDatabase()">🔧 Start Fix</button>
+    <button id="btn-rename" onclick="renameMaatschappelijk()" style="background:#16a34a;">🏷️ Hernoem "Maatschappelijk werk" → "Sociaal domein"</button>
 
     <div id="log"></div>
 
@@ -114,6 +115,43 @@
                 log(`🏷️ ${categoriesFixed} categorieën aangepast`);
                 log('');
                 log('✅ Klaar! Ga terug naar index.html en ververs de pagina.', 'success');
+
+            } catch (err) {
+                log(`Fout: ${err.message}`, 'error');
+            }
+
+            btn.disabled = false;
+        }
+
+        async function renameMaatschappelijk() {
+            const btn = document.getElementById('btn-rename');
+            btn.disabled = true;
+            document.getElementById('log').innerHTML = '';
+
+            log('🔍 Zoeken naar zorgverleners met categorie "Maatschappelijk werk"...');
+
+            try {
+                const snapshot = await db.collection('zorgverleners')
+                    .where('categorie', '==', 'Maatschappelijk werk')
+                    .get();
+
+                if (snapshot.empty) {
+                    log('ℹ️ Geen zorgverleners gevonden met categorie "Maatschappelijk werk". Niets te doen.');
+                    btn.disabled = false;
+                    return;
+                }
+
+                log(`Gevonden: ${snapshot.size} zorgverlener(s)`, 'warning');
+
+                let count = 0;
+                for (const doc of snapshot.docs) {
+                    await db.collection('zorgverleners').doc(doc.id).update({ categorie: 'Sociaal domein' });
+                    log(`✓ "${doc.data().naam}" → Sociaal domein`, 'success');
+                    count++;
+                }
+
+                log('');
+                log(`✅ ${count} zorgverlener(s) bijgewerkt. Ga terug naar index.html en ververs de pagina.`, 'success');
 
             } catch (err) {
                 log(`Fout: ${err.message}`, 'error');

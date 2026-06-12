@@ -10,7 +10,6 @@
         'GGZ',
         'Jeugd GGZ',
         'Verslavingszorg',
-        'Maatschappelijk werk',
         'Sociaal domein',
         'Fysiotherapie',
         'Diëtetiek',
