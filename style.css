@@ -391,6 +391,7 @@ body {
 
 .card-header {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: flex-start;
     gap: 0.5rem;
@@ -400,6 +401,8 @@ body {
     font-size: 1rem;
     font-weight: 600;
     color: var(--color-text);
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 .card-categorie {
@@ -411,7 +414,9 @@ body {
     background: var(--color-primary-light);
     padding: 0.2rem 0.5rem;
     border-radius: 4px;
-    white-space: nowrap;
+    white-space: normal;
+    text-align: right;
+    max-width: 100%;
 }
 
 .card-contact {
