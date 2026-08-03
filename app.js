@@ -5,8 +5,8 @@
 (function () {
     'use strict';
 
-    // --- Categorieën ---
-    const CATEGORIEEN = {
+    // --- Categorieën (standaard; worden overschreven vanuit Firestore config/categories) ---
+    let CATEGORIEEN = {
         'GGZ': ['BGGZ', 'SGGZ', 'ADHD', 'Verslavingszorg', 'Eetstoornissen', 'Relatie- en systeemtherapie', 'Seksuologie', 'ALK', 'Psychotrauma', 'Psychiatrie en crisisopvang', 'Overig'],
         'Jeugdzorg': ['Jeugdzorg en jeugdhulp', 'Consultatiebureaus en jeugdgezondheidszorg', 'Jongerenwerk', 'Opvoedondersteuning'],
         'Gehandicaptenzorg': [],
@@ -17,11 +17,13 @@
         'Verloskundige': [],
         'Overig': []
     };
+    let CATEGORY_COLORS = {}; // naam → kleurindex (geladen vanuit Firestore)
 
-    // Geeft een CSS-klasse terug die de categorie een eigen kleur uit het regenboogpalet geeft
     function getCategoryColorClass(categorie) {
-        const index = Object.keys(CATEGORIEEN).indexOf(categorie);
-        return 'cat-color-' + (index >= 0 ? index : 0);
+        const idx = CATEGORY_COLORS.hasOwnProperty(categorie)
+            ? CATEGORY_COLORS[categorie]
+            : Object.keys(CATEGORIEEN).indexOf(categorie);
+        return 'cat-color-' + (Math.max(0, idx) % 9);
     }
 
     // --- State ---
@@ -100,11 +102,34 @@
                 firebase.initializeApp(firebaseConfig);
             }
             db = firebase.firestore();
-            loadProviders();
-            loadDocuments();
+            loadCategories().finally(() => {
+                loadProviders();
+                loadDocuments();
+            });
         } catch (err) {
             console.error('Firebase init error:', err);
             showToast('Fout bij verbinden met database. Controleer firebase-config.js');
+        }
+    }
+
+    async function loadCategories() {
+        try {
+            const doc = await db.collection('config').doc('categories').get();
+            if (doc.exists) {
+                const list = doc.data().list || [];
+                if (list.length > 0) {
+                    CATEGORIEEN = {};
+                    CATEGORY_COLORS = {};
+                    list.forEach((item, i) => {
+                        CATEGORIEEN[item.naam] = item.subcategorieen || [];
+                        CATEGORY_COLORS[item.naam] = item.kleur ?? i;
+                    });
+                    renderCategoryFilters();
+                    renderCategorieSelect();
+                }
+            }
+        } catch (err) {
+            console.warn('Categorieën laden uit Firestore mislukt, gebruik standaard:', err);
         }
     }
 
@@ -135,6 +160,7 @@
     // =========================================================
     function renderCategoryFilters() {
         const container = $('#category-filters');
+        container.innerHTML = '';
         const allChip = document.createElement('button');
         allChip.className = 'category-chip active';
         allChip.textContent = 'Alles';

@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin · Sociale Kaart Purmerend</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #2563eb; --primary-hover: #1d4ed8; --primary-light: #dbeafe;
+            --danger: #dc2626; --success: #16a34a;
+            --bg: #f1f5f9; --white: #ffffff;
+            --text: #1e293b; --text-muted: #64748b;
+            --border: #e2e8f0; --border-hover: #cbd5e1;
+            --radius: 8px; --radius-lg: 12px;
+            --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.06);
+        }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); font-size: 0.875rem; line-height: 1.5; }
+        .hidden { display: none !important; }
+        a { color: inherit; text-decoration: none; }
+
+        /* ── Login ── */
+        .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .login-card { background: var(--white); border-radius: var(--radius-lg); padding: 2.5rem; width: 360px; box-shadow: var(--shadow-md); text-align: center; }
+        .login-logo { margin-bottom: 1rem; }
+        .login-card h1 { font-size: 1.2rem; margin-bottom: 0.25rem; }
+        .login-card p { color: var(--text-muted); font-size: 0.8rem; margin-bottom: 1.75rem; }
+        .login-card input[type=password] { width: 100%; padding: 0.65rem 0.875rem; border: 1px solid var(--border); border-radius: var(--radius); font-size: 0.875rem; font-family: inherit; margin-bottom: 0.75rem; outline: none; }
+        .login-card input[type=password]:focus { border-color: var(--primary); }
+        .login-card .btn-login { width: 100%; padding: 0.65rem; background: var(--primary); color: white; border: none; border-radius: var(--radius); font-size: 0.875rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+        .login-card .btn-login:hover { background: var(--primary-hover); }
+        .login-err { color: var(--danger); font-size: 0.78rem; margin-top: 0.5rem; }
+
+        /* ── Shell ── */
+        .app { min-height: 100vh; display: flex; flex-direction: column; }
+        header { background: var(--white); border-bottom: 1px solid var(--border); height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; position: sticky; top: 0; z-index: 50; box-shadow: var(--shadow); }
+        .header-left { display: flex; align-items: center; gap: 0.75rem; }
+        .header-left h1 { font-size: 0.95rem; font-weight: 700; }
+        .badge { background: var(--primary); color: white; font-size: 0.6rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .header-right { display: flex; align-items: center; gap: 0.5rem; }
+        main { flex: 1; max-width: 920px; margin: 0 auto; width: 100%; padding: 2rem 1.5rem; }
+
+        /* ── Buttons ── */
+        .btn { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.45rem 0.875rem; border-radius: var(--radius); font-size: 0.8rem; font-weight: 500; cursor: pointer; border: 1px solid transparent; font-family: inherit; transition: background 0.15s, border-color 0.15s; white-space: nowrap; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-ghost { background: transparent; color: var(--text); border-color: var(--border); }
+        .btn-ghost:hover { background: var(--bg); }
+        .btn-success { background: var(--success); color: white; border-color: var(--success); }
+        .btn-success:hover { background: #15803d; }
+        .btn-danger { background: var(--danger); color: white; border-color: var(--danger); }
+        .btn-sm { padding: 0.3rem 0.625rem; font-size: 0.75rem; }
+        .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: 1px solid var(--border); border-radius: var(--radius); background: transparent; cursor: pointer; color: var(--text-muted); transition: background 0.15s; }
+        .icon-btn:hover { background: var(--bg); color: var(--text); }
+        .icon-btn.del:hover { background: #fee2e2; border-color: #fca5a5; color: var(--danger); }
+
+        /* ── Tabs ── */
+        .tabs { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 1.75rem; gap: 0.125rem; }
+        .tab { padding: 0.6rem 1.25rem; background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -2px; font-size: 0.875rem; font-weight: 500; color: var(--text-muted); cursor: pointer; font-family: inherit; transition: color 0.15s; }
+        .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+        .tab:hover:not(.active) { color: var(--text); }
+        .panel { display: none; }
+        .panel.active { display: block; }
+
+        /* ── Section header ── */
+        .sec-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+        .sec-head h2 { font-size: 1rem; font-weight: 700; }
+        .sec-desc { color: var(--text-muted); font-size: 0.8rem; margin-bottom: 1.5rem; line-height: 1.6; }
+
+        /* ── Category list ── */
+        .cat-list { display: flex; flex-direction: column; gap: 0.625rem; }
+        .cat-item { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+        .cat-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.7rem 0.875rem; }
+        .order-btns { display: flex; flex-direction: column; gap: 1px; flex-shrink: 0; }
+        .order-btn { width: 20px; height: 17px; border: 1px solid var(--border); border-radius: 3px; background: var(--bg); cursor: pointer; font-size: 0.55rem; display: flex; align-items: center; justify-content: center; line-height: 1; }
+        .order-btn:hover { background: var(--border); }
+        .color-strip { display: flex; gap: 3px; flex-shrink: 0; }
+        .cdot { width: 16px; height: 16px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; flex-shrink: 0; transition: transform 0.1s; }
+        .cdot:hover { transform: scale(1.2); }
+        .cdot.sel { transform: scale(1.15); box-shadow: 0 0 0 2px var(--text); }
+        .cat-name { flex: 1; min-width: 0; border: 1px solid var(--border); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.875rem; font-family: inherit; outline: none; }
+        .cat-name:focus { border-color: var(--primary); }
+        .expand-btn { border: 1px solid var(--border); background: none; border-radius: 6px; padding: 0.3rem 0.6rem; font-size: 0.75rem; cursor: pointer; color: var(--text-muted); white-space: nowrap; font-family: inherit; }
+        .expand-btn:hover { background: var(--bg); }
+        .cat-body { border-top: 1px solid var(--border); background: var(--bg); padding: 0.875rem; }
+        .cat-body-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 0.5rem; }
+        .subcat-list { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.5rem; }
+        .subcat-row { display: flex; align-items: center; gap: 0.4rem; }
+        .subcat-input { flex: 1; border: 1px solid var(--border); border-radius: 6px; padding: 0.3rem 0.55rem; font-size: 0.8rem; font-family: inherit; background: var(--white); outline: none; }
+        .subcat-input:focus { border-color: var(--primary); }
+        .add-subcat-btn { width: 100%; border: 1px dashed var(--border); background: none; border-radius: 6px; padding: 0.35rem; font-size: 0.78rem; color: var(--text-muted); cursor: pointer; font-family: inherit; }
+        .add-subcat-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+        .add-cat-btn { width: 100%; border: 2px dashed var(--border); background: none; border-radius: var(--radius-lg); padding: 0.75rem; font-size: 0.875rem; color: var(--text-muted); cursor: pointer; font-family: inherit; margin-top: 0.625rem; }
+        .add-cat-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+
+        /* ── Import ── */
+        .drop-zone { border: 2px dashed var(--border); border-radius: var(--radius-lg); padding: 3rem 2rem; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
+        .drop-zone:hover, .drop-zone.over { border-color: var(--primary); background: var(--primary-light); }
+        .drop-zone svg { display: block; margin: 0 auto 0.875rem; color: var(--text-muted); }
+        .drop-zone p { color: var(--text-muted); margin-bottom: 0.3rem; }
+        .drop-zone p strong { color: var(--primary); }
+        .drop-zone .hint { font-size: 0.75rem; }
+        .drop-zone .fmt { font-size: 0.72rem; margin-top: 0.5rem; background: var(--bg); display: inline-block; padding: 0.25rem 0.625rem; border-radius: 4px; font-family: monospace; }
+        #file-input { display: none; }
+
+        .map-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin-top: 1.25rem; }
+        .map-card h3 { font-size: 0.875rem; font-weight: 700; margin-bottom: 0.875rem; }
+        .map-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.625rem; }
+        .map-row label { display: block; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); margin-bottom: 0.25rem; }
+        .map-row select { width: 100%; border: 1px solid var(--border); border-radius: 6px; padding: 0.35rem 0.5rem; font-size: 0.78rem; font-family: inherit; outline: none; }
+        .map-row select:focus { border-color: var(--primary); }
+
+        .preview-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-lg); margin-top: 1.25rem; }
+        .preview-wrap table { width: 100%; border-collapse: collapse; font-size: 0.75rem; white-space: nowrap; }
+        .preview-wrap th { background: var(--bg); padding: 0.5rem 0.75rem; text-align: left; font-weight: 600; border-bottom: 1px solid var(--border); }
+        .preview-wrap td { padding: 0.375rem 0.75rem; border-bottom: 1px solid var(--border); max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+        .preview-wrap tr:last-child td { border-bottom: none; }
+        .preview-info { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.5rem; }
+
+        .import-bar { display: flex; align-items: center; gap: 1rem; margin-top: 1.25rem; flex-wrap: wrap; }
+        .import-prog { font-size: 0.78rem; color: var(--text-muted); }
+
+        .log { background: #0f172a; color: #e2e8f0; border-radius: var(--radius-lg); padding: 0.875rem 1rem; font-family: 'Consolas', 'Courier New', monospace; font-size: 0.75rem; max-height: 280px; overflow-y: auto; margin-top: 1.25rem; display: flex; flex-direction: column; gap: 0.2rem; }
+        .log:empty { display: none; }
+        .log .ok { color: #4ade80; }
+        .log .err { color: #f87171; }
+        .log .warn { color: #fbbf24; }
+        .log .info { color: #94a3b8; }
+
+        /* ── Toast ── */
+        #toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 0.6rem 1.25rem; border-radius: 999px; font-size: 0.8rem; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.2s; white-space: nowrap; }
+        #toast.show { opacity: 1; }
+    </style>
+</head>
+<body>
+
+<!-- ── Login ── -->
+<div id="login-screen" class="login-wrap">
+    <div class="login-card">
+        <div class="login-logo">
+            <svg width="44" height="44" viewBox="0 0 48 48" fill="none">
+                <circle cx="24" cy="24" r="24" fill="#2563eb"/>
+                <path d="M24 12v24M12 24h24" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+        </div>
+        <h1>Admin</h1>
+        <p>Sociale Kaart Purmerend</p>
+        <form id="login-form">
+            <input type="password" id="pw-input" placeholder="Wachtwoord" autocomplete="current-password" required>
+            <button type="submit" class="btn-login">Inloggen</button>
+            <p id="login-err" class="login-err hidden">Onjuist wachtwoord</p>
+        </form>
+    </div>
+</div>
+
+<!-- ── App ── -->
+<div id="app" class="app hidden">
+    <header>
+        <div class="header-left">
+            <svg width="28" height="28" viewBox="0 0 48 48" fill="none">
+                <circle cx="24" cy="24" r="24" fill="#2563eb"/>
+                <path d="M24 12v24M12 24h24" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+            <h1>Sociale Kaart Purmerend</h1>
+            <span class="badge">Admin</span>
+        </div>
+        <div class="header-right">
+            <a href="index.html" class="btn btn-ghost">← Naar app</a>
+            <button id="btn-logout" class="btn btn-ghost">Uitloggen</button>
+        </div>
+    </header>
+
+    <main>
+        <div class="tabs">
+            <button class="tab active" data-tab="categories">🗂️ Categorieën</button>
+            <button class="tab" data-tab="import">📥 Batch import</button>
+        </div>
+
+        <!-- ── Tab: Categorieën ── -->
+        <div id="panel-categories" class="panel active">
+            <div class="sec-head">
+                <h2>Categorieën &amp; subcategorieën</h2>
+                <button id="btn-save" class="btn btn-success">✓ Opslaan</button>
+            </div>
+            <p class="sec-desc">
+                Voeg categorieën toe, hernoem ze of pas de volgorde aan. Klik op <strong>▾ Subcategorieën</strong> om subcategorieën te beheren.
+                Kies een kleur via de gekleurde bolletjes. Druk op <strong>Opslaan</strong> om de wijzigingen op te slaan — de hoofdapp toont de nieuwe categorieën na een verversing.
+            </p>
+            <div id="cat-list" class="cat-list"></div>
+            <button id="btn-add-cat" class="add-cat-btn">+ Categorie toevoegen</button>
+        </div>
+
+        <!-- ── Tab: Batch import ── -->
+        <div id="panel-import" class="panel">
+            <div class="sec-head">
+                <h2>Batch import</h2>
+            </div>
+            <p class="sec-desc">
+                Upload een CSV- of Excel-bestand (.xlsx) met zorgverleners. Na het uploaden koppel je de kolommen aan de velden en bekijk je een voorvertoning. Importeer daarna met één klik.
+            </p>
+
+            <div id="drop-zone" class="drop-zone">
+                <input type="file" id="file-input" accept=".csv,.xlsx,.xls">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                <p><strong>Klik hier</strong> of sleep een bestand hierheen</p>
+                <p class="hint">Ondersteund: .csv en .xlsx</p>
+                <p class="fmt">naam · categorie · subcategorie · adres · telefoon · email · website · labels</p>
+            </div>
+
+            <div id="import-setup" class="hidden">
+                <div class="map-card">
+                    <h3>Kolommen koppelen</h3>
+                    <div id="map-grid" class="map-grid"></div>
+                </div>
+                <div class="preview-wrap">
+                    <table id="preview-table"><thead></thead><tbody></tbody></table>
+                </div>
+                <p id="preview-info" class="preview-info"></p>
+                <div class="import-bar">
+                    <button id="btn-import" class="btn btn-primary">Importeer <span id="import-count"></span> rijen</button>
+                    <button id="btn-reset" class="btn btn-ghost">Ander bestand</button>
+                    <span id="import-prog" class="import-prog"></span>
+                </div>
+            </div>
+            <div id="import-log" class="log"></div>
+        </div>
+    </main>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+'use strict';
+
+// ── Kleurenpalet (zelfde als hoofdapp) ──────────────────────────────
+const KLEUREN = [
+    { bg: '#fee2e2', text: '#b91c1c', naam: 'Rood'   },
+    { bg: '#ffedd5', text: '#c2410c', naam: 'Oranje'  },
+    { bg: '#fef9c3', text: '#a16207', naam: 'Geel'    },
+    { bg: '#dcfce7', text: '#15803d', naam: 'Groen'   },
+    { bg: '#ccfbf1', text: '#0f766e', naam: 'Teal'    },
+    { bg: '#dbeafe', text: '#1d4ed8', naam: 'Blauw'   },
+    { bg: '#e0e7ff', text: '#4338ca', naam: 'Indigo'  },
+    { bg: '#f3e8ff', text: '#7e22ce', naam: 'Paars'   },
+    { bg: '#fce7f3', text: '#be185d', naam: 'Roze'    },
+];
+
+// Standaard categorieën (zelfde als hardcoded in app.js)
+const STANDAARD = [
+    { naam: 'GGZ',                                       kleur: 0, subcategorieen: ['BGGZ','SGGZ','ADHD','Verslavingszorg','Eetstoornissen','Relatie- en systeemtherapie','Seksuologie','ALK','Psychotrauma','Psychiatrie en crisisopvang','Overig'] },
+    { naam: 'Jeugdzorg',                                 kleur: 1, subcategorieen: ['Jeugdzorg en jeugdhulp','Consultatiebureaus en jeugdgezondheidszorg','Jongerenwerk','Opvoedondersteuning'] },
+    { naam: 'Gehandicaptenzorg',                         kleur: 2, subcategorieen: [] },
+    { naam: 'Verpleging, verzorging en thuiszorg (VVT)', kleur: 3, subcategorieen: ['Thuiszorg','Wonen met zorg','ELV en respijtverblijf','Huishoudelijke hulp'] },
+    { naam: 'Sociaal domein',                            kleur: 4, subcategorieen: ['Sociale wijkteams','Welzijn en ontmoeting','Maatschappelijk werk','Mantelzorg en informele zorg','Geld, werk en recht','Jeugd en gezin','Wonen en toegankelijkheid'] },
+    { naam: 'Paramedische zorg',                         kleur: 5, subcategorieen: ['Fysiotherapie','Diëtetiek','Logopedie','Podotherapie en voetzorg','Ergotherapie'] },
+    { naam: 'Apotheek',                                  kleur: 6, subcategorieen: [] },
+    { naam: 'Verloskundige',                             kleur: 7, subcategorieen: [] },
+    { naam: 'Overig',                                    kleur: 8, subcategorieen: [] },
+];
+
+const IMPORT_VELDEN = [
+    { key: 'naam',        label: 'Naam',                    required: true  },
+    { key: 'categorie',   label: 'Categorie',               required: false },
+    { key: 'subcategorie',label: 'Subcategorie',            required: false },
+    { key: 'adres',       label: 'Adres',                   required: false },
+    { key: 'telefoon',    label: 'Telefoon',                required: false },
+    { key: 'email',       label: 'E-mail',                  required: false },
+    { key: 'website',     label: 'Website',                 required: false },
+    { key: 'labels',      label: 'Labels (;-gescheiden)',   required: false },
+];
+
+const VELD_ALIASSEN = {
+    naam:         ['naam','name','organisatie','praktijk','zorgverlener','instelling'],
+    categorie:    ['categorie','category','cat','type','soort'],
+    subcategorie: ['subcategorie','subcategory','subcat','specialisme','afdeling'],
+    adres:        ['adres','address','straat','locatie','vestigingsadres'],
+    telefoon:     ['telefoon','tel','phone','telefoonnummer','gsm'],
+    email:        ['email','e-mail','mail','emailadres'],
+    website:      ['website','url','web','site','link'],
+    labels:       ['labels','tags','specialisaties','keywords','trefwoorden'],
+};
+
+// ── State ────────────────────────────────────────────────────────────
+let db = null;
+let categories = [];   // werkende kopie voor categorie-editor
+let parsedRows = [];   // rijen na parse van upload
+let fileHeaders = [];  // kolomnamen van geüpload bestand
+
+// ── Auth ─────────────────────────────────────────────────────────────
+async function hashPw(pw) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+document.getElementById('login-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const hash = await hashPw(document.getElementById('pw-input').value);
+    if (hash === PASSWORD_HASH) {
+        sessionStorage.setItem('sk_auth', 'true');
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('app').classList.remove('hidden');
+        initAdmin();
+    } else {
+        document.getElementById('login-err').classList.remove('hidden');
+        document.getElementById('pw-input').value = '';
+    }
+});
+
+document.getElementById('btn-logout').addEventListener('click', () => {
+    sessionStorage.removeItem('sk_auth');
+    location.reload();
+});
+
+if (sessionStorage.getItem('sk_auth') === 'true') {
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    initAdmin();
+}
+
+// ── Init ─────────────────────────────────────────────────────────────
+async function initAdmin() {
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    setupTabs();
+    setupImport();
+    await loadCats();
+}
+
+// ── Tabs ─────────────────────────────────────────────────────────────
+function setupTabs() {
+    document.querySelectorAll('.tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+        });
+    });
+}
+
+// ── Categorieën: laden ───────────────────────────────────────────────
+async function loadCats() {
+    try {
+        const doc = await db.collection('config').doc('categories').get();
+        categories = doc.exists && (doc.data().list || []).length > 0
+            ? doc.data().list
+            : JSON.parse(JSON.stringify(STANDAARD));
+    } catch {
+        categories = JSON.parse(JSON.stringify(STANDAARD));
+    }
+    renderCatList();
+    document.getElementById('btn-save').addEventListener('click', saveCats);
+    document.getElementById('btn-add-cat').addEventListener('click', addCat);
+}
+
+// ── Categorieën: opslaan ─────────────────────────────────────────────
+async function saveCats() {
+    const list = readCatsFromDOM();
+    try {
+        await db.collection('config').doc('categories').set({ list });
+        toast('Categorieën opgeslagen ✓');
+    } catch (err) {
+        toast('Fout: ' + err.message);
+    }
+}
+
+function readCatsFromDOM() {
+    return Array.from(document.querySelectorAll('#cat-list .cat-item')).map(item => ({
+        naam: item.querySelector('.cat-name').value.trim(),
+        kleur: parseInt(item.dataset.kleur ?? '0'),
+        subcategorieen: Array.from(item.querySelectorAll('.subcat-input'))
+            .map(i => i.value.trim()).filter(Boolean),
+    })).filter(c => c.naam);
+}
+
+// ── Categorieën: renderen ────────────────────────────────────────────
+function renderCatList() {
+    const list = document.getElementById('cat-list');
+    list.innerHTML = '';
+    categories.forEach((cat, idx) => list.appendChild(makeCatItem(cat, idx)));
+}
+
+function makeCatItem(cat, idx) {
+    const kleur = cat.kleur ?? idx % 9;
+    const item = document.createElement('div');
+    item.className = 'cat-item';
+    item.dataset.kleur = kleur;
+
+    // ─ Header row ─
+    const row = document.createElement('div');
+    row.className = 'cat-row';
+
+    // Volgorde-knoppen
+    const orderWrap = document.createElement('div');
+    orderWrap.className = 'order-btns';
+    const upBtn = document.createElement('button');
+    upBtn.className = 'order-btn'; upBtn.textContent = '▲'; upBtn.title = 'Omhoog';
+    const dnBtn = document.createElement('button');
+    dnBtn.className = 'order-btn'; dnBtn.textContent = '▼'; dnBtn.title = 'Omlaag';
+    upBtn.addEventListener('click', () => moveCat(item, -1));
+    dnBtn.addEventListener('click', () => moveCat(item, +1));
+    orderWrap.appendChild(upBtn); orderWrap.appendChild(dnBtn);
+
+    // Kleurpicker
+    const colorRow = document.createElement('div');
+    colorRow.className = 'color-strip';
+    KLEUREN.forEach((k, ki) => {
+        const dot = document.createElement('button');
+        dot.className = 'cdot' + (ki === kleur ? ' sel' : '');
+        dot.style.background = k.bg;
+        dot.style.outline = ki === kleur ? `2px solid ${k.text}` : 'none';
+        dot.title = k.naam;
+        dot.type = 'button';
+        dot.addEventListener('click', () => pickColor(item, colorRow, ki));
+        colorRow.appendChild(dot);
+    });
+
+    // Naam-input
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text'; nameInput.className = 'cat-name';
+    nameInput.value = cat.naam; nameInput.placeholder = 'Categorienaam…';
+
+    // Subcategorieën toggle
+    const toggleBtn = document.createElement('button');
+    toggleBtn.type = 'button';
+    toggleBtn.className = 'expand-btn';
+    const subCount = (cat.subcategorieen || []).length;
+    toggleBtn.textContent = `▾ ${subCount} subcategorie${subCount !== 1 ? 'ën' : ''}`;
+
+    // Verwijder-knop
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button'; delBtn.className = 'icon-btn del'; delBtn.title = 'Verwijderen';
+    delBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m5 0V4a1 1 0 011-1h2a1 1 0 011 1v2"/></svg>`;
+    delBtn.addEventListener('click', () => {
+        if (confirm(`Categorie "${nameInput.value || 'zonder naam'}" verwijderen?`)) item.remove();
+    });
+
+    row.appendChild(orderWrap);
+    row.appendChild(colorRow);
+    row.appendChild(nameInput);
+    row.appendChild(toggleBtn);
+    row.appendChild(delBtn);
+
+    // ─ Body (subcategorieën) ─
+    const body = document.createElement('div');
+    body.className = 'cat-body hidden';
+
+    const bodyLabel = document.createElement('p');
+    bodyLabel.className = 'cat-body-label';
+    bodyLabel.textContent = 'Subcategorieën';
+
+    const subcatList = document.createElement('div');
+    subcatList.className = 'subcat-list';
+    (cat.subcategorieen || []).forEach(sub => subcatList.appendChild(makeSubcatRow(sub)));
+
+    const addSubBtn = document.createElement('button');
+    addSubBtn.type = 'button'; addSubBtn.className = 'add-subcat-btn';
+    addSubBtn.textContent = '+ Subcategorie toevoegen';
+    addSubBtn.addEventListener('click', () => {
+        const newRow = makeSubcatRow('');
+        subcatList.appendChild(newRow);
+        newRow.querySelector('.subcat-input').focus();
+        updateToggleLabel(toggleBtn, subcatList);
+    });
+
+    body.appendChild(bodyLabel);
+    body.appendChild(subcatList);
+    body.appendChild(addSubBtn);
+
+    toggleBtn.addEventListener('click', () => {
+        const open = !body.classList.contains('hidden');
+        body.classList.toggle('hidden', open);
+        updateToggleLabel(toggleBtn, subcatList);
+        if (!open) toggleBtn.textContent = toggleBtn.textContent.replace('▾','▴').replace('▴','▾'); // toggle arrow
+        toggleBtn.textContent = (body.classList.contains('hidden') ? '▾ ' : '▴ ')
+            + subcatList.querySelectorAll('.subcat-input').length
+            + ' subcategorie' + (subcatList.querySelectorAll('.subcat-input').length !== 1 ? 'ën' : '');
+    });
+
+    item.appendChild(row);
+    item.appendChild(body);
+    return item;
+}
+
+function makeSubcatRow(value) {
+    const row = document.createElement('div');
+    row.className = 'subcat-row';
+    const input = document.createElement('input');
+    input.type = 'text'; input.className = 'subcat-input';
+    input.value = value; input.placeholder = 'Subcategorie…';
+    const del = document.createElement('button');
+    del.type = 'button'; del.className = 'icon-btn del'; del.title = 'Verwijderen';
+    del.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+    del.addEventListener('click', () => row.remove());
+    row.appendChild(input); row.appendChild(del);
+    return row;
+}
+
+function updateToggleLabel(btn, subcatList) {
+    const n = subcatList.querySelectorAll('.subcat-input').length;
+    const open = btn.closest('.cat-item').querySelector('.cat-body').classList.contains('hidden') === false;
+    btn.textContent = (open ? '▴ ' : '▾ ') + n + ' subcategorie' + (n !== 1 ? 'ën' : '');
+}
+
+function pickColor(item, colorRow, idx) {
+    item.dataset.kleur = idx;
+    colorRow.querySelectorAll('.cdot').forEach((dot, ki) => {
+        dot.classList.toggle('sel', ki === idx);
+        dot.style.outline = ki === idx ? `2px solid ${KLEUREN[ki].text}` : 'none';
+    });
+}
+
+function moveCat(item, dir) {
+    const list = document.getElementById('cat-list');
+    const items = Array.from(list.children);
+    const idx = items.indexOf(item);
+    const target = idx + dir;
+    if (target < 0 || target >= items.length) return;
+    if (dir === -1) list.insertBefore(item, items[target]);
+    else list.insertBefore(items[target], item);
+}
+
+function addCat() {
+    const newCat = { naam: '', kleur: categories.length % 9, subcategorieen: [] };
+    const item = makeCatItem(newCat, document.querySelectorAll('#cat-list .cat-item').length);
+    document.getElementById('cat-list').appendChild(item);
+    item.querySelector('.cat-name').focus();
+}
+
+// ── Import: setup ────────────────────────────────────────────────────
+function setupImport() {
+    const zone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+
+    zone.addEventListener('click', () => fileInput.click());
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('over'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('over'));
+    zone.addEventListener('drop', e => {
+        e.preventDefault(); zone.classList.remove('over');
+        if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files[0]) handleFile(fileInput.files[0]);
+    });
+
+    document.getElementById('btn-import').addEventListener('click', importRows);
+    document.getElementById('btn-reset').addEventListener('click', resetImport);
+}
+
+function handleFile(file) {
+    const name = file.name.toLowerCase();
+    if (name.endsWith('.csv')) {
+        Papa.parse(file, {
+            header: true, skipEmptyLines: true,
+            complete: res => setupPreview(res.data, res.meta.fields || []),
+        });
+    } else if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            const wb = XLSX.read(e.target.result, { type: 'array' });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+            const headers = rows.length ? Object.keys(rows[0]) : [];
+            setupPreview(rows, headers);
+        };
+        reader.readAsArrayBuffer(file);
+    } else {
+        toast('Gebruik een .csv of .xlsx bestand');
+    }
+}
+
+function setupPreview(rows, headers) {
+    parsedRows = rows;
+    fileHeaders = headers;
+    document.getElementById('drop-zone').classList.add('hidden');
+    document.getElementById('import-setup').classList.remove('hidden');
+    document.getElementById('import-log').innerHTML = '';
+    document.getElementById('import-count').textContent = rows.length;
+    document.getElementById('import-prog').textContent = '';
+    renderMappingUI(headers);
+    renderPreview();
+}
+
+// ── Import: kolommen koppelen ────────────────────────────────────────
+function autoMap(headers) {
+    const mapping = {};
+    headers.forEach(h => {
+        const norm = h.toLowerCase().replace(/[^a-z]/g, '');
+        for (const [field, aliases] of Object.entries(VELD_ALIASSEN)) {
+            if (!mapping[field] && aliases.some(a => norm.includes(a.replace(/[^a-z]/g, '')))) {
+                mapping[field] = h;
+            }
+        }
+    });
+    return mapping;
+}
+
+function renderMappingUI(headers) {
+    const grid = document.getElementById('map-grid');
+    grid.innerHTML = '';
+    const auto = autoMap(headers);
+    IMPORT_VELDEN.forEach(veld => {
+        const wrap = document.createElement('div');
+        wrap.className = 'map-row';
+        const lbl = document.createElement('label');
+        lbl.textContent = veld.label + (veld.required ? ' *' : '');
+        lbl.htmlFor = 'map-' + veld.key;
+        const sel = document.createElement('select');
+        sel.id = 'map-' + veld.key;
+        const none = document.createElement('option');
+        none.value = ''; none.textContent = '— niet importeren —';
+        sel.appendChild(none);
+        headers.forEach(h => {
+            const opt = document.createElement('option');
+            opt.value = h; opt.textContent = h;
+            if (auto[veld.key] === h) opt.selected = true;
+            sel.appendChild(opt);
+        });
+        sel.addEventListener('change', renderPreview);
+        wrap.appendChild(lbl); wrap.appendChild(sel);
+        grid.appendChild(wrap);
+    });
+}
+
+function getMapping() {
+    const m = {};
+    IMPORT_VELDEN.forEach(v => {
+        const sel = document.getElementById('map-' + v.key);
+        if (sel && sel.value) m[v.key] = sel.value;
+    });
+    return m;
+}
+
+// ── Import: voorvertoning ────────────────────────────────────────────
+function renderPreview() {
+    const mapping = getMapping();
+    const activeFields = IMPORT_VELDEN.filter(v => mapping[v.key]);
+    const table = document.getElementById('preview-table');
+    const thead = table.querySelector('thead');
+    const tbody = table.querySelector('tbody');
+
+    thead.innerHTML = '<tr>' + activeFields.map(v => `<th>${v.label}</th>`).join('') + '</tr>';
+    tbody.innerHTML = '';
+    parsedRows.slice(0, 10).forEach(row => {
+        const tr = document.createElement('tr');
+        activeFields.forEach(v => {
+            const td = document.createElement('td');
+            td.textContent = row[mapping[v.key]] ?? '';
+            tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+    });
+
+    const shown = Math.min(10, parsedRows.length);
+    document.getElementById('preview-info').textContent =
+        `Voorvertoning: eerste ${shown} van ${parsedRows.length} rijen.`;
+}
+
+// ── Import: uitvoeren ────────────────────────────────────────────────
+async function importRows() {
+    const mapping = getMapping();
+    if (!mapping.naam) { toast('Koppel eerst de kolom "Naam"'); return; }
+
+    const btn = document.getElementById('btn-import');
+    btn.disabled = true;
+    const logEl = document.getElementById('import-log');
+    logEl.innerHTML = '';
+
+    let ok = 0, skip = 0, err = 0;
+    for (let i = 0; i < parsedRows.length; i++) {
+        const row = parsedRows[i];
+        const naam = (row[mapping.naam] || '').trim();
+        if (!naam) { addLog(logEl, `Rij ${i+1}: naam leeg → overgeslagen`, 'warn'); skip++; continue; }
+
+        const data = {
+            naam,
+            categorie:    mapping.categorie    ? (row[mapping.categorie]    || '').trim() : '',
+            subcategorie: mapping.subcategorie  ? (row[mapping.subcategorie] || '').trim() : '',
+            adres:        mapping.adres         ? (row[mapping.adres]        || '').trim() : '',
+            telefoon:     mapping.telefoon      ? (row[mapping.telefoon]     || '').trim() : '',
+            email:        mapping.email         ? (row[mapping.email]        || '').trim() : '',
+            website:      mapping.website       ? (row[mapping.website]      || '').trim() : '',
+            labels:       mapping.labels        ? (row[mapping.labels] || '').split(';').map(s => s.trim()).filter(Boolean) : [],
+            opmerkingen:  [],
+        };
+
+        try {
+            await db.collection('zorgverleners').add(data);
+            addLog(logEl, `✓ ${naam}`, 'ok');
+            ok++;
+        } catch (e) {
+            addLog(logEl, `✗ Rij ${i+1} (${naam}): ${e.message}`, 'err');
+            err++;
+        }
+        document.getElementById('import-prog').textContent = `${i+1} / ${parsedRows.length}`;
+    }
+
+    addLog(logEl, `─────────────────────────`, 'info');
+    addLog(logEl, `Klaar: ${ok} geïmporteerd · ${skip} overgeslagen · ${err} fouten`, 'info');
+    btn.disabled = false;
+}
+
+function resetImport() {
+    parsedRows = []; fileHeaders = [];
+    document.getElementById('drop-zone').classList.remove('hidden');
+    document.getElementById('import-setup').classList.add('hidden');
+    document.getElementById('import-log').innerHTML = '';
+    document.getElementById('file-input').value = '';
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────
+function addLog(el, msg, cls) {
+    const line = document.createElement('span');
+    line.className = cls || 'info';
+    line.textContent = msg;
+    el.appendChild(line);
+    el.scrollTop = el.scrollHeight;
+}
+
+let toastTimer;
+function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+</script>
+</body>
+</html>
