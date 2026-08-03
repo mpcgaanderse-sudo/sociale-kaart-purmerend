@@ -537,6 +537,9 @@
         $('#detail-naam').textContent = provider.naam;
         $('#detail-categorie').textContent = provider.categorie + (provider.subcategorie ? ' · ' + provider.subcategorie : '');
         $('#detail-categorie').className = 'detail-categorie ' + getCategoryColorClass(provider.categorie);
+        const omschrijvingEl = $('#detail-omschrijving');
+        omschrijvingEl.textContent = provider.omschrijving || '';
+        omschrijvingEl.classList.toggle('hidden', !provider.omschrijving);
 
         // Contact info
         let contactHtml = '';
@@ -868,6 +871,7 @@
                 telefoon: $('#provider-telefoon').value.trim(),
                 email: $('#provider-email').value.trim(),
                 website: $('#provider-website').value.trim(),
+                omschrijving: $('#provider-omschrijving').value.trim(),
                 labels: currentLabels,
                 opmerkingen: []
             };
@@ -979,6 +983,7 @@
         $('#provider-telefoon').value = isEdit ? provider.telefoon || '' : '';
         $('#provider-email').value = isEdit ? provider.email || '' : '';
         $('#provider-website').value = isEdit ? provider.website || '' : '';
+        $('#provider-omschrijving').value = isEdit ? provider.omschrijving || '' : '';
 
         window._currentLabels = isEdit ? [...(provider.labels || [])] : [];
         renderLabelsList($('#provider-labels-list'), window._currentLabels);
